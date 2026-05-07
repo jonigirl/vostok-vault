@@ -125,7 +125,7 @@ class SaveDetailPanel(ctk.CTkFrame):
 
         ctk.CTkLabel(
             f,
-            text="Active Mods",
+            text="Mods at Backup Time",
             font=ctk.CTkFont(family=font, size=14, weight="bold"),
             anchor="w",
         ).grid(row=row, column=0, columnspan=2, sticky="w", padx=12, pady=(16, 4))
@@ -279,7 +279,15 @@ class SaveDetailPanel(ctk.CTkFrame):
             ).pack(pady=20)
             return
 
-        headers = ["Name", "Version", "Enabled"]
+        ctk.CTkLabel(
+            f,
+            text="Mods that were active when this backup was created.",
+            font=ctk.CTkFont(family=font, size=12),
+            text_color=("gray55", "gray55"),
+            anchor="w",
+        ).pack(fill="x", padx=8, pady=(8, 4))
+
+        headers = ["Name", "Version", "Was Active"]
         col_widths = [220, 110, 80]
 
         header_row = ctk.CTkFrame(f, fg_color=("gray80", "#1A1A2E"), corner_radius=4)

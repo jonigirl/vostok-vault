@@ -5,6 +5,17 @@ All notable changes to Vostok Vault will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Mods section in the Overview tab and the Mods tab now clearly show the mods that were active **when the backup was created**, not the current game state — heading renamed to "Mods at Backup Time", column header renamed to "Was Active", and a subtitle added to the Mods tab
+- Restore confirmation dialog now warns the user if their current game session has not been backed up, advising them to use "+ Backup Now" first if they want to keep a named copy
+
+### Added
+
+- `current_save_needs_backup()` in `backup.py` — compares tracked save file mtimes against the most recent non-restore backup to detect an unsaved session
+
 ## [0.1.0] - 2026-05-07
 
 ### Added
