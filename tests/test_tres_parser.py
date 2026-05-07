@@ -6,8 +6,18 @@ from vostok_vault.tres_parser import (
     _is_item_path,
     parse_character,
     parse_storage,
+    parse_validator,
     parse_world,
 )
+
+VALIDATOR_TRES = """\
+[gd_resource type="Resource" script_class="ValidatorSave" format=3]
+[ext_resource type="Script" path="res://Scripts/ValidatorSave.gd" id="1"]
+[resource]
+script = ExtResource("1")
+ID = "Taikuri"
+warning = "WARNING: Do not touch this file."
+"""
 
 WORLD_TRES = """\
 [gd_resource type="Resource" script_class="WorldSave" format=3]
@@ -75,7 +85,15 @@ def test_parse_world_returns_all_keys(tmp_path: Path) -> None:
     p = tmp_path / "World.tres"
     p.write_text(WORLD_TRES, encoding="utf-8")
     result = parse_world(p)
-    assert set(result.keys()) == {"day", "time_str", "season", "weather", "difficulty"}
+    assert set(result.keys()) == {
+        "day",
+        "time_str",
+        "season",
+        "weather",
+        "difficulty",
+        "shelters",
+        "weather_time",
+    }
 
 
 def test_parse_world_day(tmp_path: Path) -> None:
@@ -96,6 +114,28 @@ def test_parse_world_season_and_difficulty(tmp_path: Path) -> None:
     result = parse_world(p)
     assert result["season"] == 1
     assert result["difficulty"] == 1
+
+
+def test_parse_world_shelters(tmp_path: Path) -> None:
+    p = tmp_path / "World.tres"
+    p.write_text(WORLD_TRES, encoding="utf-8")
+    assert parse_world(p)["shelters"] == 0
+
+
+def test_parse_world_weather_time(tmp_path: Path) -> None:
+    p = tmp_path / "World.tres"
+    p.write_text(WORLD_TRES, encoding="utf-8")
+    result = parse_world(p)
+    assert result["weather_time"] == pytest.approx(380.3)
+
+
+def test_parse_world_missing_shelters_and_weather_time(tmp_path: Path) -> None:
+    content = '[resource]\nday = 1\ntime = 3600.0\nseason = 0\ndifficulty = 0\nweather = "Clear"\n'
+    p = tmp_path / "World.tres"
+    p.write_text(content, encoding="utf-8")
+    result = parse_world(p)
+    assert result["shelters"] is None
+    assert result["weather_time"] is None
 
 
 def test_parse_world_time_conversion(tmp_path: Path) -> None:
@@ -206,16 +246,41 @@ def test_parse_storage_label_tent(tmp_path: Path) -> None:
     assert parse_storage(p)[0]["storage_label"] == "Tent"
 
 
+def test_parse_validator_returns_player_id(tmp_path: Path) -> None:
+    p = tmp_path / "Validator.tres"
+    p.write_text(VALIDATOR_TRES, encoding="utf-8")
+    assert parse_validator(p)["player_id"] == "Taikuri"
+
+
+def test_parse_validator_missing_file(tmp_path: Path) -> None:
+    assert parse_validator(tmp_path / "missing.tres")["player_id"] is None
+
+
+def test_parse_validator_no_id_field(tmp_path: Path) -> None:
+    content = '[resource]\nwarning = "WARNING: Do not touch this."\n'
+    p = tmp_path / "Validator.tres"
+    p.write_text(content, encoding="utf-8")
+    assert parse_validator(p)["player_id"] is None
+
+
 @pytest.mark.parametrize(
     "prefix",
     [
         "res://Items/Weapons/",
         "res://Items/Ammo/",
+        "res://Items/Attachments/",
+        "res://Items/Backpacks/",
+        "res://Items/Belts/",
+        "res://Items/Books/",
         "res://Items/Clothing/",
+        "res://Items/Consumables/",
+        "res://Items/Electronics/",
         "res://Items/Equipment/",
         "res://Items/Food/",
+        "res://Items/Knives/",
         "res://Items/Medical/",
         "res://Items/Misc/",
+        "res://Items/Rigs/",
         "res://Items/Tools/",
         "res://Items/Containers/",
         "res://Items/Keys/",

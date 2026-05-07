@@ -67,11 +67,19 @@ def _extract_nested_item_refs(val: str) -> list[str]:
 _ITEM_SUBTREES = (
     "res://Items/Weapons/",
     "res://Items/Ammo/",
+    "res://Items/Attachments/",
+    "res://Items/Backpacks/",
+    "res://Items/Belts/",
+    "res://Items/Books/",
     "res://Items/Clothing/",
+    "res://Items/Consumables/",
+    "res://Items/Electronics/",
     "res://Items/Equipment/",
     "res://Items/Food/",
+    "res://Items/Knives/",
     "res://Items/Medical/",
     "res://Items/Misc/",
+    "res://Items/Rigs/",
     "res://Items/Tools/",
     "res://Items/Containers/",
     "res://Items/Keys/",
@@ -235,10 +243,39 @@ def parse_world(path: Path) -> dict:
     except (ValueError, TypeError):
         pass
 
+    try:
+        shelters = int(raw.get("shelters", ""))
+    except (ValueError, TypeError):
+        shelters = None
+
+    weather_time: float | None = None
+    try:
+        weather_time = float(raw.get("weatherTime", ""))
+    except (ValueError, TypeError):
+        pass
+
     return {
         "day": day,
         "time_str": time_str,
         "season": season,
         "weather": weather,
         "difficulty": difficulty,
+        "shelters": shelters,
+        "weather_time": weather_time,
     }
+
+
+def parse_validator(path: Path) -> dict:
+    if not path.exists():
+        return {"player_id": None}
+    in_resource = False
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        stripped = line.strip()
+        if stripped == "[resource]":
+            in_resource = True
+            continue
+        if in_resource and stripped.startswith("[") and stripped.endswith("]"):
+            break
+        if in_resource and stripped.startswith("ID = "):
+            return {"player_id": stripped[5:].strip().strip('"')}
+    return {"player_id": None}

@@ -13,9 +13,5 @@ wheels/
 .env
 .env.*
 
-# Virtual environments
-.venv
-
-# Environment files
-.env
-.env.*
+# Local dev data (gitignored — personal save scans, item reference DB)
+data/
