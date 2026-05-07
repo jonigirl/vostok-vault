@@ -119,6 +119,31 @@ def restore_backup(backup_path: Path) -> bool:
         return True
 
 
+def current_save_needs_backup() -> bool:
+    """Return True if tracked save files are newer than the most recent non-restore backup."""
+    if not SAVE_DIR.exists():
+        return False
+    latest_mtime: float | None = None
+    for fname in TRACKED_FILES:
+        fpath = SAVE_DIR / fname
+        if fpath.exists():
+            mt = fpath.stat().st_mtime
+            if latest_mtime is None or mt > latest_mtime:
+                latest_mtime = mt
+    if latest_mtime is None:
+        return False
+    backups = list_backups()
+    non_restore = [b for b in backups if not b.get("tag", "").startswith("pre_restore")]
+    if not non_restore:
+        return True
+    most_recent = non_restore[0]
+    try:
+        backup_dt = datetime.fromisoformat(most_recent["created"])
+        return latest_mtime > backup_dt.timestamp()
+    except (ValueError, KeyError):
+        return True
+
+
 def delete_backup(backup_path: Path) -> bool:
     with _lock:
         if not backup_path.exists():

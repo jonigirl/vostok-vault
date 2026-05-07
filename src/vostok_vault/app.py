@@ -202,11 +202,21 @@ class VostokVaultApp:
     def _on_restore(self) -> None:
         if not self._selected:
             return
-        if not messagebox.askyesno(
-            "Restore Backup",
-            f"Restore '{self._selected['tag']}'?\n\nYour current save will be backed up first as 'pre_restore'.",
-            parent=self.root,
-        ):
+        if bk.current_save_needs_backup():
+            msg = (
+                f"Restore '{self._selected['tag']}'?\n\n"
+                "Warning: Your current game session has not been backed up.\n\n"
+                "An automatic 'pre_restore' snapshot will be saved before restoring, "
+                "but it won't have a custom name.\n\n"
+                "Click 'No' to create a named backup first using '+ Backup Now', "
+                "or 'Yes' to restore now."
+            )
+        else:
+            msg = (
+                f"Restore '{self._selected['tag']}'?\n\n"
+                "Your current save will be backed up first as 'pre_restore'."
+            )
+        if not messagebox.askyesno("Restore Backup", msg, parent=self.root):
             return
         ok = bk.restore_backup(Path(self._selected["_path"]))
         if ok:

@@ -6,6 +6,7 @@ import pytest
 from vostok_vault.backup import (
     _sanitise_tag,
     create_backup,
+    current_save_needs_backup,
     delete_backup,
     list_backups,
     restore_backup,
@@ -276,3 +277,115 @@ def test_delete_backup_removes_directory(tmp_path: Path) -> None:
 
     assert delete_backup(d) is True
     assert not d.exists()
+
+
+# ---------------------------------------------------------------------------
+# current_save_needs_backup
+# ---------------------------------------------------------------------------
+
+
+def test_current_save_needs_backup_no_save_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("vostok_vault.backup.SAVE_DIR", tmp_path / "missing")
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", tmp_path / "backups")
+    assert current_save_needs_backup() is False
+
+
+def test_current_save_needs_backup_no_tracked_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    save_dir = tmp_path / "save"
+    save_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.SAVE_DIR", save_dir)
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", tmp_path / "backups")
+    assert current_save_needs_backup() is False
+
+
+def test_current_save_needs_backup_no_backups_yet(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    save_dir = tmp_path / "save"
+    save_dir.mkdir()
+    (save_dir / "World.tres").write_text("data", encoding="utf-8")
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.SAVE_DIR", save_dir)
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", backup_dir)
+    assert current_save_needs_backup() is True
+
+
+def test_current_save_needs_backup_save_newer_than_backup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json
+    import time
+
+    save_dir = tmp_path / "save"
+    save_dir.mkdir()
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.SAVE_DIR", save_dir)
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", backup_dir)
+
+    d = backup_dir / "20240101_120000_manual"
+    d.mkdir()
+    (d / "manifest.json").write_text(
+        json.dumps({"id": "old", "tag": "manual", "created": "2024-01-01T12:00:00"}),
+        encoding="utf-8",
+    )
+
+    time.sleep(0.01)
+    (save_dir / "World.tres").write_text("newer", encoding="utf-8")
+
+    assert current_save_needs_backup() is True
+
+
+def test_current_save_needs_backup_backup_is_current(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json
+
+    save_dir = tmp_path / "save"
+    save_dir.mkdir()
+    (save_dir / "World.tres").write_text("data", encoding="utf-8")
+
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.SAVE_DIR", save_dir)
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", backup_dir)
+
+    d = backup_dir / "20990101_120000_manual"
+    d.mkdir()
+    (d / "manifest.json").write_text(
+        json.dumps({"id": "future", "tag": "manual", "created": "2099-01-01T12:00:00"}),
+        encoding="utf-8",
+    )
+
+    assert current_save_needs_backup() is False
+
+
+def test_current_save_needs_backup_ignores_pre_restore(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json
+
+    save_dir = tmp_path / "save"
+    save_dir.mkdir()
+    (save_dir / "World.tres").write_text("data", encoding="utf-8")
+
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.SAVE_DIR", save_dir)
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", backup_dir)
+
+    d = backup_dir / "20990101_120000_pre_restore"
+    d.mkdir()
+    (d / "manifest.json").write_text(
+        json.dumps(
+            {"id": "pr", "tag": "pre_restore", "created": "2099-01-01T12:00:00"}
+        ),
+        encoding="utf-8",
+    )
+
+    assert current_save_needs_backup() is True
