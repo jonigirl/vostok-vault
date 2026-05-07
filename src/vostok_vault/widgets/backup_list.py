@@ -12,6 +12,11 @@ class BackupCard(ctk.CTkFrame):
         self._on_click = on_click
         self._build()
         self._bind_clicks(self)
+        self.configure(takefocus=True)
+        self.bind("<FocusIn>", self._on_focus_in)
+        self.bind("<FocusOut>", self._on_focus_out)
+        self.bind("<Return>", self._clicked)
+        self.bind("<space>", self._clicked)
 
     def _bind_clicks(self, widget) -> None:
         widget.bind("<Button-1>", self._clicked)
@@ -52,6 +57,12 @@ class BackupCard(ctk.CTkFrame):
 
     def _clicked(self, _event=None) -> None:
         self._on_click(self._data)
+
+    def _on_focus_in(self, _event=None) -> None:
+        self.configure(border_width=2, border_color=("#3390FF", "#5599FF"))
+
+    def _on_focus_out(self, _event=None) -> None:
+        self.configure(border_width=0)
 
     def set_selected(self, selected: bool) -> None:
         color = ("#DDEEFF", "#1C3A58") if selected else ("gray90", "#2A2A2A")
