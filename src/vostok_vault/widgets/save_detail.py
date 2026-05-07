@@ -57,7 +57,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             self._overview_scroll,
             text="Select a backup from the list to view details.",
             font=ctk.CTkFont(family=font, size=14),
-            text_color=("gray55", "gray55"),
+            text_color=("gray70", "gray70"),
         ).pack(pady=60)
 
     def show_backup(self, data: dict | None) -> None:
@@ -95,7 +95,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                 f,
                 text=title,
                 font=ctk.CTkFont(family=font, size=11),
-                text_color=("gray50", "gray50"),
+                text_color=("gray65", "gray65"),
                 anchor="w",
             ).grid(row=row, column=0, columnspan=2, sticky="w", padx=12, pady=(12, 2))
 
@@ -137,12 +137,15 @@ class SaveDetailPanel(ctk.CTkFrame):
             chips_frame.grid(
                 row=row, column=0, columnspan=2, sticky="w", padx=12, pady=(0, 12)
             )
-            for mod in mods:
+            for i, mod in enumerate(mods):
+                if i % 3 == 0:
+                    row_frame = ctk.CTkFrame(chips_frame, fg_color="transparent")
+                    row_frame.pack(fill="x", pady=0)
                 chip_text = (
                     f"{mod.get('name', mod.get('id', '?'))}  {mod.get('version', '')}"
                 )
                 ctk.CTkLabel(
-                    chips_frame,
+                    row_frame,
                     text=chip_text,
                     font=ctk.CTkFont(family=font, size=13),
                     fg_color=("gray80", "#2E3A50"),
@@ -155,7 +158,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                 f,
                 text="No active mods",
                 font=ctk.CTkFont(family=font, size=13),
-                text_color=("gray55", "gray55"),
+                text_color=("gray70", "gray70"),
                 anchor="w",
             ).grid(row=row, column=0, columnspan=2, sticky="w", padx=12)
 
@@ -173,7 +176,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                 f,
                 text="[missing] — Character.tres not found in this backup.",
                 font=ctk.CTkFont(family=font, size=13),
-                text_color=("gray55", "gray55"),
+                text_color=("gray70", "gray70"),
             ).pack(pady=20)
             return
 
@@ -182,7 +185,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                 f,
                 text="No equipped items found.",
                 font=ctk.CTkFont(family=font, size=13),
-                text_color=("gray55", "gray55"),
+                text_color=("gray70", "gray70"),
             ).pack(pady=20)
             return
 
@@ -234,7 +237,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                     f,
                     text="[missing]",
                     font=ctk.CTkFont(family=font, size=13),
-                    text_color=("gray55", "gray55"),
+                    text_color=("gray70", "gray70"),
                     anchor="w",
                 ).pack(fill="x", padx=20, pady=(0, 4))
                 continue
@@ -245,7 +248,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                     f,
                     text="Empty",
                     font=ctk.CTkFont(family=font, size=13),
-                    text_color=("gray55", "gray55"),
+                    text_color=("gray70", "gray70"),
                     anchor="w",
                 ).pack(fill="x", padx=20, pady=(0, 4))
                 continue
@@ -275,7 +278,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                 f,
                 text="No mod data recorded in this backup.",
                 font=ctk.CTkFont(family=font, size=13),
-                text_color=("gray55", "gray55"),
+                text_color=("gray70", "gray70"),
             ).pack(pady=20)
             return
 
@@ -283,7 +286,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             f,
             text="Mods that were active when this backup was created.",
             font=ctk.CTkFont(family=font, size=12),
-            text_color=("gray55", "gray55"),
+            text_color=("gray70", "gray70"),
             anchor="w",
         ).pack(fill="x", padx=8, pady=(8, 4))
 
@@ -306,7 +309,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             row_frame.pack(fill="x", padx=4, pady=1)
             enabled = mod.get("enabled", False)
             enabled_str = "Yes" if enabled else "No"
-            enabled_color = ("#2ECC71", "#27AE60") if enabled else ("gray55", "gray55")
+            enabled_color = ("#2ECC71", "#27AE60") if enabled else ("gray70", "gray70")
             name = mod.get("name", mod.get("id", "?"))
             version = mod.get("version", "?")
             for col, (val, w) in enumerate(
