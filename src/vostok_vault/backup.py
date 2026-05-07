@@ -6,8 +6,8 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
-from .config import BACKUP_DIR, SAVE_DIR, TRACKED_DIRS, TRACKED_FILES
 from .mods import get_mod_names, parse_mod_config
+from .paths import BACKUP_DIR, SAVE_DIR, TRACKED_DIRS, TRACKED_FILES
 from .tres_parser import parse_world
 
 log = logging.getLogger(__name__)

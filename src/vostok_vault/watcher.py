@@ -5,7 +5,7 @@ from typing import Callable
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from .config import SAVE_DIR, TRACKED_FILES
+from .paths import SAVE_DIR, TRACKED_FILES
 
 
 class _DebounceHandler(FileSystemEventHandler):

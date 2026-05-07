@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `current_save_needs_backup()` in `backup.py` — compares tracked save file mtimes against the most recent non-restore backup to detect an unsaved session
 - `src/vostok_vault/widgets/dialogs.py` — `_TagDialog` and `_SettingsDialog` extracted from `app.py`
 - `_ITEM_SUBTREES` allow-list in `tres_parser.py` — storage tab now only shows items from known vanilla subtrees; mod-injected paths under `res://Items/` are filtered out
+- `current_save_needs_backup()` in `backup.py` — compares tracked save file mtimes against the most recent non-restore backup to detect an unsaved session
+- `config.py` split into focused modules: `paths.py`, `constants.py`, `fonts.py`, `settings.py`, `logging_setup.py`; `config.py` kept as a backward-compatible re-export shim
 
 ### Changed
 

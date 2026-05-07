@@ -2,15 +2,10 @@ import os
 
 import customtkinter as ctk
 
-from ..config import (
-    FONT_ATKINSON,
-    FONT_OPENDYSLEXIC,
-    LOG_FILE,
-    get_font,
-    load_settings,
-    save_settings,
-    setup_logging,
-)
+from ..fonts import FONT_ATKINSON, FONT_OPENDYSLEXIC, get_font
+from ..logging_setup import setup_logging
+from ..paths import LOG_FILE
+from ..settings import load_settings, save_settings
 
 
 class _TagDialog(ctk.CTkToplevel):

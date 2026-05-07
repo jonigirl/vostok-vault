@@ -9,18 +9,17 @@ import customtkinter as ctk
 
 from . import backup as bk
 from . import tres_parser
-from .config import (
+from .constants import (
     APP_TITLE,
     LEFT_PANEL_WIDTH,
-    SAVE_DIR,
     SEASON_NAMES,
     WINDOW_MIN_HEIGHT,
     WINDOW_MIN_WIDTH,
-    get_font,
-    init_font,
-    load_settings,
-    setup_logging,
 )
+from .fonts import get_font, init_font
+from .logging_setup import setup_logging
+from .paths import SAVE_DIR
+from .settings import load_settings
 from .watcher import SaveWatcher
 from .widgets.backup_list import BackupListPanel
 from .widgets.dialogs import _SettingsDialog, _TagDialog

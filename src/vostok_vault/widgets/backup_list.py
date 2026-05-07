@@ -2,7 +2,7 @@ from typing import Callable
 
 import customtkinter as ctk
 
-from ..config import get_font
+from ..fonts import get_font
 
 
 class BackupCard(ctk.CTkFrame):

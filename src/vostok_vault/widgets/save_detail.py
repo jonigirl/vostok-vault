@@ -2,7 +2,8 @@ from pathlib import Path
 
 import customtkinter as ctk
 
-from ..config import DIFFICULTY_NAMES, SEASON_NAMES, get_font
+from ..constants import DIFFICULTY_NAMES, SEASON_NAMES
+from ..fonts import get_font
 from ..tres_parser import parse_character, parse_storage
 from .inventory_view import InventoryTable
 
