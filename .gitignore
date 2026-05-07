@@ -12,3 +12,10 @@ wheels/
 # Environment files
 .env
 .env.*
+
+# Virtual environments
+.venv
+
+# Environment files
+.env
+.env.*
