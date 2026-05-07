@@ -39,11 +39,58 @@ The GUI will open. Your Road to Vostok save folder is detected automatically fro
 
 Backups are stored in `%APPDATA%\Road to Vostok\vostok-vault-backups\` — separate from the game's own backup folder.
 
+## Building the exe
+
+```powershell
+pwsh build.ps1         # build only
+pwsh build.ps1 -Clean  # clean previous build first
+```
+
+Output: `dist/VostokVault.exe` (~18 MB, standalone, no installer needed).
+
 ## Running tests
 
 ```powershell
 uv run pytest -v
 ```
+
+## Settings and log file
+
+Settings are stored in:
+
+```
+%APPDATA%\Road to Vostok\vostok-vault-backups\settings.json
+```
+
+This file persists your font preference and debug logging toggle across sessions.
+
+The log file is at:
+
+```
+%APPDATA%\Road to Vostok\vostok-vault-backups\vostok-vault.log
+```
+
+Debug logging is **off by default**. Enable it in **⚙ Settings** to record detailed activity. If you're reporting a bug, enable debug logging, reproduce the issue, then attach the log file to your report.
+
+## Font
+
+Vostok Vault ships with [Atkinson Hyperlegible](https://brailleinstitute.org/freefont) as the default font — an open-source typeface designed for readability and low-vision users. An OpenDyslexic option is available in **⚙ Settings**.
+
+Font files are licensed under the [SIL Open Font License 1.1](assets/fonts/OFL.txt).
+
+## Known limitations
+
+- **Windows only** — the save folder path is Windows-specific (`%APPDATA%\Road to Vostok\`)
+- **Storage tab** — may show non-inventory entries from some mods or game updates; scheduled for a future fix
+- **Backup list** — mouse-only; keyboard navigation not yet supported
+
+## Troubleshooting
+
+**Save folder not detected**
+Vostok Vault looks for `%APPDATA%\Road to Vostok\`. If Road to Vostok has never been launched on this machine, the folder won't exist yet. Launch the game once to create it, then restart Vostok Vault.
+
+**Restore fails**
+Close Road to Vostok before restoring. The game locks save files while running.
 
 ## License
 

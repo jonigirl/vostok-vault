@@ -48,7 +48,9 @@ class InventoryTable(ctk.CTkFrame):
                         item.get("slot", ""),
                         item.get("item_name", ""),
                         cond,
-                        str(item.get("amount", 1)),
+                        "—"
+                        if item.get("amount", 1) == 0
+                        else str(item.get("amount", 1)),
                     ],
                     self.COL_WIDTHS,
                 )

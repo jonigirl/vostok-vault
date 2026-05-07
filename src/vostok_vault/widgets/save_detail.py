@@ -74,46 +74,68 @@ class SaveDetailPanel(ctk.CTkFrame):
         self._clear(self._overview_scroll)
         font = get_font()
         f = self._overview_scroll
+        f.grid_columnconfigure(0, weight=0, minsize=110)
 
         def info_row(label: str, value: str, row: int) -> None:
             ctk.CTkLabel(
                 f,
                 text=label,
-                font=ctk.CTkFont(family=font, size=13, weight="bold"),
-                anchor="e",
-                width=110,
-            ).grid(row=row, column=0, sticky="e", padx=(12, 6), pady=5)
+                font=ctk.CTkFont(family=font, size=13),
+                anchor="w",
+            ).grid(row=row, column=0, sticky="w", padx=(12, 8), pady=(4, 2))
             ctk.CTkLabel(
                 f,
                 text=value,
-                font=ctk.CTkFont(family=font, size=14),
+                font=ctk.CTkFont(family=font, size=14, weight="bold"),
                 anchor="w",
-            ).grid(row=row, column=1, sticky="w", padx=(0, 12), pady=5)
+            ).grid(row=row, column=1, sticky="w", padx=(0, 12), pady=(4, 2))
 
-        info_row("Tag", data.get("tag", "—"), 0)
-        info_row("Created", data.get("created", "—")[:16].replace("T", " "), 1)
-        info_row("Day", str(data.get("game_day", "?")), 2)
-        info_row("Time", data.get("game_time", "??:??"), 3)
+        def section_heading(title: str, row: int) -> None:
+            ctk.CTkLabel(
+                f,
+                text=title,
+                font=ctk.CTkFont(family=font, size=11),
+                text_color=("gray50", "gray50"),
+                anchor="w",
+            ).grid(row=row, column=0, columnspan=2, sticky="w", padx=12, pady=(12, 2))
 
+        row = 0
+        info_row("Tag", data.get("tag", "—"), row)
+        row += 1
+        info_row("Created", data.get("created", "—")[:16].replace("T", " "), row)
+        row += 1
+
+        section_heading("WORLD", row)
+        row += 1
+        info_row("Day", str(data.get("game_day", "?")), row)
+        row += 1
         season_raw = data.get("season", "?")
-        info_row("Season", SEASON_NAMES.get(season_raw, str(season_raw)), 4)
-        info_row("Weather", str(data.get("weather", "?")), 5)
+        info_row("Season", SEASON_NAMES.get(season_raw, str(season_raw)), row)
+        row += 1
+        info_row("Time", data.get("game_time", "??:??"), row)
+        row += 1
+        info_row("Weather", str(data.get("weather", "?")), row)
+        row += 1
 
+        section_heading("PLAYER", row)
+        row += 1
         diff_raw = data.get("difficulty", "?")
-        info_row("Difficulty", DIFFICULTY_NAMES.get(diff_raw, str(diff_raw)), 6)
+        info_row("Difficulty", DIFFICULTY_NAMES.get(diff_raw, str(diff_raw)), row)
+        row += 1
 
         ctk.CTkLabel(
             f,
             text="Active Mods",
             font=ctk.CTkFont(family=font, size=14, weight="bold"),
             anchor="w",
-        ).grid(row=7, column=0, columnspan=2, sticky="w", padx=12, pady=(16, 4))
+        ).grid(row=row, column=0, columnspan=2, sticky="w", padx=12, pady=(16, 4))
+        row += 1
 
         mods = [m for m in data.get("mods", []) if m.get("enabled")]
         if mods:
             chips_frame = ctk.CTkFrame(f, fg_color="transparent")
             chips_frame.grid(
-                row=8, column=0, columnspan=2, sticky="w", padx=12, pady=(0, 12)
+                row=row, column=0, columnspan=2, sticky="w", padx=12, pady=(0, 12)
             )
             for mod in mods:
                 chip_text = (
@@ -135,7 +157,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                 font=ctk.CTkFont(family=font, size=13),
                 text_color=("gray55", "gray55"),
                 anchor="w",
-            ).grid(row=8, column=0, columnspan=2, sticky="w", padx=12)
+            ).grid(row=row, column=0, columnspan=2, sticky="w", padx=12)
 
     def _populate_character(self, data: dict) -> None:
         self._clear(self._char_scroll)
@@ -167,6 +189,7 @@ class SaveDetailPanel(ctk.CTkFrame):
         slot_order = [
             "Head",
             "Chest",
+            "Torso",
             "Legs",
             "Hands",
             "Feet",
@@ -176,6 +199,8 @@ class SaveDetailPanel(ctk.CTkFrame):
             "Backpack",
             "Rig",
             "Belt",
+            "Light",
+            "Time",
             "Pocket1",
             "Pocket2",
             "Storage",

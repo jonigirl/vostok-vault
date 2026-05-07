@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 import shutil
 import threading
@@ -9,7 +10,9 @@ from .config import BACKUP_DIR, SAVE_DIR, TRACKED_DIRS, TRACKED_FILES
 from .mods import get_mod_names, parse_mod_config
 from .tres_parser import parse_world
 
-_lock = threading.Lock()
+log = logging.getLogger(__name__)
+
+_lock = threading.RLock()
 
 
 def _sanitise_tag(tag: str) -> str:
@@ -18,22 +21,23 @@ def _sanitise_tag(tag: str) -> str:
 
 
 def list_backups() -> list[dict]:
-    if not BACKUP_DIR.exists():
-        return []
-    results = []
-    for item in sorted(BACKUP_DIR.iterdir(), reverse=True):
-        if not item.is_dir():
-            continue
-        manifest_path = item / "manifest.json"
-        if not manifest_path.exists():
-            continue
-        try:
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            manifest["_path"] = str(item)
-            results.append(manifest)
-        except Exception:
-            continue
-    return results
+    with _lock:
+        if not BACKUP_DIR.exists():
+            return []
+        results = []
+        for item in sorted(BACKUP_DIR.iterdir(), reverse=True):
+            if not item.is_dir():
+                continue
+            manifest_path = item / "manifest.json"
+            if not manifest_path.exists():
+                continue
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                manifest["_path"] = str(item)
+                results.append(manifest)
+            except Exception:
+                continue
+        return results
 
 
 def create_backup(tag: str = "manual") -> dict | None:
@@ -94,28 +98,37 @@ def restore_backup(backup_path: Path) -> bool:
     with _lock:
         if not backup_path.exists():
             return False
-        if BACKUP_DIR not in backup_path.parents:
+        if BACKUP_DIR.resolve() not in backup_path.resolve().parents:
             return False
         _create_backup_locked("pre_restore")
-        for fname in TRACKED_FILES:
-            src = backup_path / fname
-            if src.exists():
-                shutil.copy2(src, SAVE_DIR / fname)
-        for dname in TRACKED_DIRS:
-            src = backup_path / dname
-            if src.exists() and src.is_dir():
-                dest_dir = SAVE_DIR / dname
-                if dest_dir.exists():
-                    shutil.rmtree(dest_dir)
-                shutil.copytree(src, dest_dir)
+        try:
+            for fname in TRACKED_FILES:
+                src = backup_path / fname
+                if src.exists():
+                    shutil.copy2(src, SAVE_DIR / fname)
+            for dname in TRACKED_DIRS:
+                src = backup_path / dname
+                if src.exists() and src.is_dir():
+                    dest_dir = SAVE_DIR / dname
+                    if dest_dir.exists():
+                        shutil.rmtree(dest_dir)
+                    shutil.copytree(src, dest_dir)
+        except OSError as e:
+            log.error("restore_backup failed: %s", e)
+            return False
         return True
 
 
 def delete_backup(backup_path: Path) -> bool:
-    if not backup_path.exists():
-        return False
-    shutil.rmtree(backup_path)
-    return True
+    with _lock:
+        if not backup_path.exists():
+            return False
+        try:
+            shutil.rmtree(backup_path)
+        except OSError as e:
+            log.error("delete_backup failed: %s", e)
+            return False
+        return True
 
 
 def prune_auto_backups(max_count: int = 5) -> None:

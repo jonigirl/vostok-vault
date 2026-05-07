@@ -12,6 +12,8 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(project_root / "assets" / "vostok-vault.ico"), "assets"),
+        (str(project_root / "assets" / "fonts" / "AtkinsonHyperlegible-Regular.ttf"), "assets/fonts"),
+        (str(project_root / "assets" / "fonts" / "AtkinsonHyperlegible-Bold.ttf"), "assets/fonts"),
     ],
     hiddenimports=[
         "customtkinter",

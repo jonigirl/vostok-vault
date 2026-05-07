@@ -65,7 +65,11 @@ def _extract_nested_item_refs(val: str) -> list[str]:
 
 
 def _is_item_path(path: str) -> bool:
-    return "/Scripts/" not in path and path.endswith(".tres")
+    return (
+        path.startswith("res://Items/")
+        and path.endswith(".tres")
+        and "/Scripts/" not in path
+    )
 
 
 def parse_character(path: Path) -> list[dict]:
