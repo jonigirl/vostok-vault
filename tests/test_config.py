@@ -1,12 +1,5 @@
-from vostok_vault.config import (
-    APP_TITLE,
-    BACKUP_DIR,
-    DIFFICULTY_NAMES,
-    SAVE_DIR,
-    SEASON_NAMES,
-    TRACKED_DIRS,
-    TRACKED_FILES,
-)
+from vostok_vault.constants import APP_TITLE, DIFFICULTY_NAMES, SEASON_NAMES
+from vostok_vault.paths import BACKUP_DIR, SAVE_DIR, TRACKED_DIRS, TRACKED_FILES
 
 
 def test_backup_dir_is_child_of_save_dir() -> None:
