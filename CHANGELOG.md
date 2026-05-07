@@ -7,14 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- Mods section in the Overview tab and the Mods tab now clearly show the mods that were active **when the backup was created**, not the current game state — heading renamed to "Mods at Backup Time", column header renamed to "Was Active", and a subtitle added to the Mods tab
-- Restore confirmation dialog now warns the user if their current game session has not been backed up, advising them to use "+ Backup Now" first if they want to keep a named copy
-
 ### Added
 
 - `current_save_needs_backup()` in `backup.py` — compares tracked save file mtimes against the most recent non-restore backup to detect an unsaved session
+- `src/vostok_vault/widgets/dialogs.py` — `_TagDialog` and `_SettingsDialog` extracted from `app.py`
+- `_ITEM_SUBTREES` allow-list in `tres_parser.py` — storage tab now only shows items from known vanilla subtrees; mod-injected paths under `res://Items/` are filtered out
+
+### Changed
+
+- Mods section in the Overview tab and the Mods tab now clearly show the mods that were active **when the backup was created** — heading renamed to "Mods at Backup Time", column header renamed to "Was Active", subtitle added to the Mods tab
+- Restore confirmation dialog now warns the user if their current game session has not been backed up
+- Manifest writes are now atomic — written to a `.tmp` file then renamed with `os.replace()` to avoid corruption on crash
+- Backup cards in the left panel are now keyboard-focusable (Tab order) with a visible blue focus border; Enter/Space activates the card
+- Secondary label/description text contrast raised from `gray55` → `gray70` / `gray50` → `gray65` (WCAG 1.4.3)
+- Mod chips in the Overview tab now wrap into rows of 3 instead of overflowing a single line
+- Rename dialog now uses the same `_TagDialog` as the backup dialog, pre-filled with the current tag
+- Settings dialog shows a note that the log path contains the Windows username
 
 ## [0.1.0] - 2026-05-07
 

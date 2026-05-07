@@ -88,9 +88,9 @@ def _create_backup_locked(tag: str = "manual") -> dict | None:
         "difficulty": world["difficulty"],
         "mods": mods,
     }
-    (dest / "manifest.json").write_text(
-        json.dumps(manifest, indent=2), encoding="utf-8"
-    )
+    tmp = dest / "manifest.json.tmp"
+    tmp.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    tmp.replace(dest / "manifest.json")
     return manifest
 
 
