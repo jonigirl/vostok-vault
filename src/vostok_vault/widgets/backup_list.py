@@ -12,7 +12,7 @@ class BackupCard(ctk.CTkFrame):
         self._on_click = on_click
         self._build()
         self._bind_clicks(self)
-        self.configure(takefocus=True)
+        self.tk.call(self._w, "configure", "-takefocus", "1")
         self.bind("<FocusIn>", self._on_focus_in)
         self.bind("<FocusOut>", self._on_focus_out)
         self.bind("<Return>", self._clicked)
