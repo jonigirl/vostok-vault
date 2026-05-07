@@ -7,12 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-08
+
 ### Added
 
 - `src/vostok_vault/widgets/dialogs.py` — `_TagDialog` and `_SettingsDialog` extracted from `app.py`
 - `_ITEM_SUBTREES` allow-list in `tres_parser.py` — storage tab now only shows items from known vanilla subtrees; mod-injected paths under `res://Items/` are filtered out
 - `current_save_needs_backup()` in `backup.py` — compares tracked save file mtimes against the most recent non-restore backup to detect an unsaved session
 - `config.py` split into focused modules: `paths.py`, `constants.py`, `fonts.py`, `settings.py`, `logging_setup.py`; `config.py` kept as a backward-compatible re-export shim
+- `scripts/build_item_db.py` — scans local backups to build a local item reference database (`data/items.json`)
+- `scripts/enrich_item_db.py` — enriches the item DB with wiki-sourced data: rarity, price, wiki name/slug, crafting uses, trader task requirements
+- `scripts/check_wiki_updates.py` — manually triggered script to check roadtovostok.wiki for item data changes after game patches
+- Inventory items coloured by rarity — rare items shown in blue, legendary in gold
+- `parse_validator` and extended `parse_world` (shelters count, weather time) added to `tres_parser.py`
+- Disclaimer added to README: not affiliated with Road to Vostok Ltd.; item data sourced from saves and the community wiki
 
 ### Changed
 
@@ -24,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mod chips in the Overview tab now wrap into rows of 3 instead of overflowing a single line
 - Rename dialog now uses the same `_TagDialog` as the backup dialog, pre-filled with the current tag
 - Settings dialog shows a note that the log path contains the Windows username
+- Mod display names corrected — all 6 supported mods now shown with accurate names
 
 ## [0.1.0] - 2026-05-07
 
@@ -45,4 +54,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Thread safety** — `threading.RLock` protects all backup operations; symlink-safe path-traversal check on restore
 - **Portable exe** — single-file `dist/VostokVault.exe` (~18 MB) built with PyInstaller; fonts bundled
 
+[0.2.0]: https://github.com/jonigirl/vostok-vault/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/jonigirl/vostok-vault/releases/tag/v0.1.0
