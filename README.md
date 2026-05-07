@@ -95,3 +95,11 @@ Close Road to Vostok before restoring. The game locks save files while running.
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Disclaimer
+
+Vostok Vault is an unofficial fan project and is not affiliated with, endorsed by, or connected to Road to Vostok Ltd. in any way.
+
+Item data shown in the app is sourced from player save files and [roadtovostok.wiki](https://roadtovostok.wiki/) — an independent, community-run wiki that is itself not affiliated with Road to Vostok Ltd.
+
+All game content, assets, and trademarks are the property of Road to Vostok Ltd.

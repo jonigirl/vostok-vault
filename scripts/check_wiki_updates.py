@@ -5,6 +5,10 @@ Fetches each item page and compares wiki_name, rarity, and price_euros against
 the current database. Reports any differences to stdout. Optionally writes
 changes back with --update.
 
+roadtovostok.wiki is an independent community resource and is not affiliated
+with Road to Vostok Ltd. This script is for personal, non-commercial use only.
+Scrapes politely with delays — do not modify to bypass rate limiting.
+
 Usage:
     uv run python scripts/check_wiki_updates.py
     uv run python scripts/check_wiki_updates.py --update
