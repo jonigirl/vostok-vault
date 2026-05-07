@@ -4,8 +4,24 @@ import customtkinter as ctk
 
 from ..constants import DIFFICULTY_NAMES, SEASON_NAMES
 from ..fonts import get_font
-from ..tres_parser import parse_character, parse_storage
+from ..tres_parser import parse_character, parse_storage, parse_validator, parse_world
 from .inventory_view import InventoryTable
+
+_MOD_DISPLAY_NAMES: dict[str, str] = {
+    "CT-map": "Collapsed Tunnels",
+    "elegant-hud": "Elegant HUD",
+    "road-to-vostok-enemy-ai": "Faction Warfare + More Enemies",
+    "feel": "FEEL",
+    "xp-skills-system": "XP & Skills System",
+    "doinkoink-mcm": "Mod Configuration Menu",
+}
+
+
+def _format_weather_time(secs: float) -> str:
+    mins = int(secs / 60)
+    if mins < 60:
+        return f"{mins} min"
+    return f"{mins // 60}h {mins % 60}m"
 
 
 class SaveDetailPanel(ctk.CTkFrame):
@@ -124,6 +140,20 @@ class SaveDetailPanel(ctk.CTkFrame):
         info_row("Difficulty", DIFFICULTY_NAMES.get(diff_raw, str(diff_raw)), row)
         row += 1
 
+        backup_path = Path(data.get("_path", ""))
+        validator = parse_validator(backup_path / "Validator.tres")
+        if validator["player_id"]:
+            info_row("Player ID", validator["player_id"], row)
+            row += 1
+
+        world = parse_world(backup_path / "World.tres")
+        if world["shelters"] is not None:
+            info_row("Shelters", str(world["shelters"]), row)
+            row += 1
+        if world["weather_time"] is not None:
+            info_row("Weather in", _format_weather_time(world["weather_time"]), row)
+            row += 1
+
         ctk.CTkLabel(
             f,
             text="Mods at Backup Time",
@@ -222,51 +252,83 @@ class SaveDetailPanel(ctk.CTkFrame):
         f = self._storage_scroll
         backup_path = Path(data.get("_path", ""))
 
+        def make_toggle(btn, frame, flag, header_text):
+            def _toggle():
+                if flag[0]:
+                    frame.pack_forget()
+                    btn.configure(text=f"\u25b6  {header_text}")
+                    flag[0] = False
+                else:
+                    frame.pack(fill="x", padx=4, pady=(0, 8))
+                    btn.configure(text=f"\u25bc  {header_text}")
+                    flag[0] = True
+
+            return _toggle
+
         for filename in ("Cabin.tres", "Tent.tres"):
             storage_path = backup_path / filename
             label = filename.replace(".tres", "")
 
-            ctk.CTkLabel(
-                f,
-                text=label,
-                font=ctk.CTkFont(family=font, size=14, weight="bold"),
+            items: list[dict] = []
+            if storage_path.exists():
+                items = parse_storage(storage_path)
+            count_label = f"  ({len(items)})" if items else ""
+            header_text = f"{label}{count_label}"
+
+            section = ctk.CTkFrame(f, fg_color="transparent")
+            section.pack(fill="x", padx=0, pady=0)
+
+            header_btn = ctk.CTkButton(
+                section,
+                text=f"\u25b6  {header_text}",
+                fg_color=("gray78", "#1A1A2E"),
+                hover_color=("gray72", "#252545"),
+                text_color=("gray10", "gray90"),
                 anchor="w",
-            ).pack(fill="x", padx=10, pady=(12, 4))
+                corner_radius=4,
+                font=ctk.CTkFont(family=font, size=13, weight="bold"),
+            )
+            header_btn.pack(fill="x", padx=4, pady=(8, 0))
+
+            content_frame = ctk.CTkFrame(section, fg_color="transparent")
 
             if not storage_path.exists():
                 ctk.CTkLabel(
-                    f,
+                    content_frame,
                     text="[missing]",
                     font=ctk.CTkFont(family=font, size=13),
                     text_color=("gray70", "gray70"),
                     anchor="w",
-                ).pack(fill="x", padx=20, pady=(0, 4))
-                continue
-
-            items = parse_storage(storage_path)
-            if not items:
+                ).pack(fill="x", padx=20, pady=(4, 4))
+            elif not items:
                 ctk.CTkLabel(
-                    f,
+                    content_frame,
                     text="Empty",
                     font=ctk.CTkFont(family=font, size=13),
                     text_color=("gray70", "gray70"),
                     anchor="w",
-                ).pack(fill="x", padx=20, pady=(0, 4))
-                continue
+                ).pack(fill="x", padx=20, pady=(4, 4))
+            else:
+                for item in items:
+                    cond = (
+                        f"{item['condition']}%"
+                        if item.get("condition") is not None
+                        else "\u2014"
+                    )
+                    amt = item.get("amount", 1)
+                    amt_str = f"  \xd7{amt}" if amt > 1 else ""
+                    line = f"{item['item_name']}{amt_str}  {cond}"
+                    ctk.CTkLabel(
+                        content_frame,
+                        text=line,
+                        font=ctk.CTkFont(family=font, size=13),
+                        anchor="w",
+                    ).pack(fill="x", padx=20, pady=2)
 
-            for item in items:
-                cond = (
-                    f"{item['condition']}%"
-                    if item.get("condition") is not None
-                    else "—"
-                )
-                line = f"{item['item_name']}  ×{item['amount']}  {cond}"
-                ctk.CTkLabel(
-                    f,
-                    text=line,
-                    font=ctk.CTkFont(family=font, size=13),
-                    anchor="w",
-                ).pack(fill="x", padx=20, pady=2)
+            is_expanded = [False]
+            header_btn.configure(
+                command=make_toggle(header_btn, content_frame, is_expanded, header_text)
+            )
 
     def _populate_mods(self, data: dict) -> None:
         self._clear(self._mods_scroll)
@@ -311,7 +373,8 @@ class SaveDetailPanel(ctk.CTkFrame):
             enabled = mod.get("enabled", False)
             enabled_str = "Yes" if enabled else "No"
             enabled_color = ("#2ECC71", "#27AE60") if enabled else ("gray70", "gray70")
-            name = mod.get("name", mod.get("id", "?"))
+            mod_id = mod.get("id", "?")
+            name = _MOD_DISPLAY_NAMES.get(mod_id) or mod.get("name", mod_id)
             version = mod.get("version", "?")
             for col, (val, w) in enumerate(
                 zip([name, version, enabled_str], col_widths)
