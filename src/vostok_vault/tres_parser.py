@@ -64,12 +64,22 @@ def _extract_nested_item_refs(val: str) -> list[str]:
     return _extract_extresource_refs(val)
 
 
+_ITEM_SUBTREES = (
+    "res://Items/Weapons/",
+    "res://Items/Ammo/",
+    "res://Items/Clothing/",
+    "res://Items/Equipment/",
+    "res://Items/Food/",
+    "res://Items/Medical/",
+    "res://Items/Misc/",
+    "res://Items/Tools/",
+    "res://Items/Containers/",
+    "res://Items/Keys/",
+)
+
+
 def _is_item_path(path: str) -> bool:
-    return (
-        path.startswith("res://Items/")
-        and path.endswith(".tres")
-        and "/Scripts/" not in path
-    )
+    return any(path.startswith(prefix) for prefix in _ITEM_SUBTREES)
 
 
 def parse_character(path: Path) -> list[dict]:

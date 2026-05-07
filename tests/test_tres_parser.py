@@ -1,6 +1,13 @@
 from pathlib import Path
 
-from vostok_vault.tres_parser import parse_character, parse_storage, parse_world
+import pytest
+
+from vostok_vault.tres_parser import (
+    _is_item_path,
+    parse_character,
+    parse_storage,
+    parse_world,
+)
 
 WORLD_TRES = """\
 [gd_resource type="Resource" script_class="WorldSave" format=3]
@@ -45,7 +52,7 @@ script = ExtResource("4")
 STORAGE_TRES = """\
 [gd_resource type="Resource" script_class="StorageSave" format=3]
 [ext_resource type="Script" path="res://Scripts/SlotData.gd" id="1"]
-[ext_resource type="Resource" path="res://Items/Consumables/Medkit/Medkit.tres" id="2"]
+[ext_resource type="Resource" path="res://Items/Medical/Medkit/Medkit.tres" id="2"]
 [sub_resource type="Resource" id="Resource_xyz"]
 script = ExtResource("1")
 itemData = ExtResource("2")
@@ -197,3 +204,30 @@ def test_parse_storage_label_tent(tmp_path: Path) -> None:
     p = tmp_path / "Tent.tres"
     p.write_text(STORAGE_TRES, encoding="utf-8")
     assert parse_storage(p)[0]["storage_label"] == "Tent"
+
+
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        "res://Items/Weapons/",
+        "res://Items/Ammo/",
+        "res://Items/Clothing/",
+        "res://Items/Equipment/",
+        "res://Items/Food/",
+        "res://Items/Medical/",
+        "res://Items/Misc/",
+        "res://Items/Tools/",
+        "res://Items/Containers/",
+        "res://Items/Keys/",
+    ],
+)
+def test_is_item_path_allows_known_subtrees(prefix: str) -> None:
+    assert _is_item_path(prefix + "SomeItem/SomeItem.tres") is True
+
+
+def test_is_item_path_rejects_mod_subtree() -> None:
+    assert _is_item_path("res://Items/SomeMod/ModWeapon/ModWeapon.tres") is False
+
+
+def test_is_item_path_rejects_unrelated_path() -> None:
+    assert _is_item_path("res://Scripts/CharacterSave.gd") is False
