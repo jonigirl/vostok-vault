@@ -487,8 +487,8 @@ class SaveDetailPanel(ctk.CTkFrame):
             anchor="w",
         ).pack(fill="x", padx=8, pady=(8, 4))
 
-        headers = ["Name", "Version", "Was Active"]
-        col_widths = [220, 110, 80]
+        headers = ["", "Name", "Version"]
+        col_widths = [24, 260, 110]
 
         header_row = ctk.CTkFrame(f, fg_color=("gray80", "#1A1A2E"), corner_radius=4)
         header_row.pack(fill="x", padx=4, pady=(4, 0))
@@ -505,17 +505,14 @@ class SaveDetailPanel(ctk.CTkFrame):
             row_frame = ctk.CTkFrame(f, fg_color="transparent")
             row_frame.pack(fill="x", padx=4, pady=1)
             enabled = mod.get("enabled", False)
-            enabled_str = "Yes" if enabled else "No"
-            enabled_color = ("#2ECC71", "#27AE60") if enabled else ("gray70", "gray70")
+            dot_color = ("#27AE60", "#2ECC71") if enabled else ("gray55", "gray55")
             mod_id = mod.get("id", "?")
             name = _MOD_DISPLAY_NAMES.get(mod_id) or mod.get("name", mod_id)
             version = mod.get("version", "?")
-            for col, (val, w) in enumerate(
-                zip([name, version, enabled_str], col_widths)
-            ):
+            for col, (val, w) in enumerate(zip(["●", name, version], col_widths)):
                 kwargs: dict = {}
-                if col == 2:
-                    kwargs["text_color"] = enabled_color
+                if col == 0:
+                    kwargs["text_color"] = dot_color
                 ctk.CTkLabel(
                     row_frame,
                     text=val,
