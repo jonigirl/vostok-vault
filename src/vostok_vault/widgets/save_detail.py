@@ -69,8 +69,26 @@ class SaveDetailPanel(ctk.CTkFrame):
         self._char_scroll = ctk.CTkScrollableFrame(self._tabs.tab("Character"))
         self._char_scroll.grid(row=0, column=0, sticky="nsew")
 
-        self._storage_scroll = ctk.CTkScrollableFrame(self._tabs.tab("Storage"))
-        self._storage_scroll.grid(row=0, column=0, sticky="nsew")
+        storage_tab = self._tabs.tab("Storage")
+        storage_tab.grid_rowconfigure(0, weight=0)
+        storage_tab.grid_rowconfigure(1, weight=1)
+        storage_tab.grid_columnconfigure(0, weight=1)
+
+        self._storage_filter_var = ctk.StringVar()
+        self._storage_filter_entry = ctk.CTkEntry(
+            storage_tab,
+            placeholder_text="Filter items…",
+            textvariable=self._storage_filter_var,
+            height=32,
+            corner_radius=4,
+        )
+        self._storage_filter_entry.grid(
+            row=0, column=0, sticky="ew", padx=8, pady=(8, 4)
+        )
+        self._storage_filter_var.trace_add("write", self._on_storage_filter_change)
+
+        self._storage_scroll = ctk.CTkScrollableFrame(storage_tab)
+        self._storage_scroll.grid(row=1, column=0, sticky="nsew")
 
         self._mods_scroll = ctk.CTkScrollableFrame(self._tabs.tab("Mods"))
         self._mods_scroll.grid(row=0, column=0, sticky="nsew")
@@ -96,6 +114,10 @@ class SaveDetailPanel(ctk.CTkFrame):
             font=ctk.CTkFont(family=font, size=14),
             text_color=("gray70", "gray70"),
         ).pack(pady=60)
+
+    def _on_storage_filter_change(self, *_args) -> None:
+        if self._current:
+            self._populate_storage(self._current)
 
     def show_backup(self, data: dict | None) -> None:
         self._current = data
@@ -331,6 +353,7 @@ class SaveDetailPanel(ctk.CTkFrame):
         font = get_font()
         f = self._storage_scroll
         backup_path = Path(data.get("_path", ""))
+        filter_text = self._storage_filter_var.get().lower().strip()
 
         def make_toggle(btn, frame, flag, header_text):
             def _toggle():
@@ -345,15 +368,26 @@ class SaveDetailPanel(ctk.CTkFrame):
 
             return _toggle
 
+        total_across = 0
         for filename in ("Cabin.tres", "Tent.tres"):
             storage_path = backup_path / filename
             label = filename.replace(".tres", "")
 
-            items: list[dict] = []
+            all_items: list[dict] = []
             if storage_path.exists():
-                items = parse_storage(storage_path)
-            count_label = f"  ({len(items)})" if items else ""
-            header_text = f"{label}{count_label}"
+                all_items = parse_storage(storage_path)
+
+            items = (
+                [i for i in all_items if filter_text in i["item_name"].lower()]
+                if filter_text
+                else all_items
+            )
+            total_across += len(items)
+
+            shown_count = (
+                f"  ({len(items)})" if items else ("  (0)" if filter_text else "")
+            )
+            header_text = f"{label}{shown_count}"
 
             section = ctk.CTkFrame(f, fg_color="transparent")
             section.pack(fill="x", padx=0, pady=0)
@@ -417,6 +451,18 @@ class SaveDetailPanel(ctk.CTkFrame):
             header_btn.configure(
                 command=make_toggle(header_btn, content_frame, is_expanded, header_text)
             )
+
+        tab_label = f"Storage ({total_across})" if total_across else "Storage"
+        self._tabs.set(self._tabs.get())  # force tab bar refresh
+        try:
+            self._tabs._segmented_button.configure(
+                values=[
+                    v if not v.startswith("Storage") else tab_label
+                    for v in self._tabs._segmented_button.cget("values")
+                ]
+            )
+        except Exception:
+            pass
 
     def _populate_mods(self, data: dict) -> None:
         self._clear(self._mods_scroll)
