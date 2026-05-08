@@ -384,6 +384,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                         btn.configure(text=f"\u25bc  {text}")
                         flag[0] = True
                     self._char_expanded[key] = flag[0]
+
                 return _toggle
 
             section = ctk.CTkFrame(f, fg_color="transparent")
@@ -407,7 +408,9 @@ class SaveDetailPanel(ctk.CTkFrame):
             if is_expanded[0]:
                 content_frame.pack(fill="x", padx=4, pady=(0, 4))
             header_btn.configure(
-                command=make_char_toggle(header_btn, content_frame, is_expanded, group_key, header_text)
+                command=make_char_toggle(
+                    header_btn, content_frame, is_expanded, group_key, header_text
+                )
             )
 
         for item in items_sorted:
