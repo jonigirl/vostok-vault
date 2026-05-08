@@ -47,12 +47,16 @@ class BackupCard(ctk.CTkFrame):
             text_color=("gray55", "gray55"),
         ).pack(fill="x", padx=10)
 
+        ironman = self._data.get("difficulty") == 3
+        subtitle = f"Day {day}  ·  {time_str}  ·  {mod_label}"
+        if ironman:
+            subtitle += "  ·  Ironman"
         ctk.CTkLabel(
             self,
-            text=f"Day {day}  ·  {time_str}  ·  {mod_label}",
+            text=subtitle,
             font=ctk.CTkFont(family=font, size=13),
             anchor="w",
-            text_color=("gray55", "gray55"),
+            text_color=("#C0392B", "#E74C3C") if ironman else ("gray55", "gray55"),
         ).pack(fill="x", padx=10, pady=(0, 8))
 
     def _clicked(self, _event=None) -> None:

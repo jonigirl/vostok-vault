@@ -46,6 +46,10 @@ def test_difficulty_names_hardcore() -> None:
     assert DIFFICULTY_NAMES[2] == "Hardcore"
 
 
+def test_difficulty_names_ironman() -> None:
+    assert DIFFICULTY_NAMES[3] == "Ironman"
+
+
 def test_app_title() -> None:
     assert APP_TITLE == "Vostok Vault"
 

@@ -28,6 +28,10 @@ class _TagDialog(ctk.CTkToplevel):
         self._entry.pack(padx=20, pady=(0, 12))
         self._entry.insert(0, suggestion)
         self._entry.select_range(0, "end")
+        self._entry.configure(
+            validate="key",
+            validatecommand=(self.register(lambda s: len(s) <= 60), "%P"),
+        )
 
         btn_frame = ctk.CTkFrame(self, fg_color="transparent")
         btn_frame.pack(padx=20, pady=(0, 16))
@@ -47,6 +51,7 @@ class _TagDialog(ctk.CTkToplevel):
         ).pack(side="left")
 
         self.protocol("WM_DELETE_WINDOW", self._cancel)
+        self.transient(parent)
         self.grab_set()
         self._entry.bind("<Return>", lambda e: self._ok())
         self._entry.bind("<Escape>", lambda e: self._cancel())
@@ -157,6 +162,7 @@ class _SettingsDialog(ctk.CTkToplevel):
         ).pack(padx=20, pady=(8, 16))
 
         self.grab_set()
+        self.transient(parent)
         self.protocol("WM_DELETE_WINDOW", self.destroy)
 
     def _on_debug_toggle(self) -> None:

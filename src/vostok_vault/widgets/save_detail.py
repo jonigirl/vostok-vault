@@ -139,6 +139,15 @@ class SaveDetailPanel(ctk.CTkFrame):
         diff_raw = data.get("difficulty", "?")
         info_row("Difficulty", DIFFICULTY_NAMES.get(diff_raw, str(diff_raw)), row)
         row += 1
+        if diff_raw == 3:
+            ctk.CTkLabel(
+                f,
+                text="⚠ Ironman — character is deleted on death",
+                font=ctk.CTkFont(family=font, size=13),
+                text_color=("#C0392B", "#E74C3C"),
+                anchor="w",
+            ).grid(row=row, column=0, columnspan=2, sticky="w", padx=12, pady=(0, 4))
+            row += 1
 
         backup_path = Path(data.get("_path", ""))
         validator = parse_validator(backup_path / "Validator.tres")

@@ -1,6 +1,9 @@
+import json
+
 import customtkinter as ctk
 
 from ..fonts import get_font
+from ..paths import ITEMS_JSON
 
 # Rarity colouring: (light_mode_colour, dark_mode_colour).
 # "common" items use the default text colour — no entry needed.
@@ -9,82 +12,30 @@ _RARITY_COLOURS: dict[str, tuple[str, str]] = {
     "legendary": ("#B7770D", "#F0B027"),
 }
 
-# Rarity lookup keyed by item_name as it appears in save files.
-# Source: roadtovostok.wiki/items + namu.wiki (May 2026).
-_ITEM_RARITY: dict[str, str] = {
-    "Alarm Clock": "common",
-    "AKM": "common",
-    "Ammo 12x70": "common",
-    "Ammo 223": "common",
-    "Ammo 45ACP": "common",
-    "Ammo 545x39": "common",
-    "Ammo 762x39": "common",
-    "Ammo 9x18": "common",
-    "Ammo 9x19": "common",
-    "Antibiotics": "rare",
-    "Antiseptic": "rare",
-    "Balm": "common",
-    "Bandage": "common",
-    "Batteries": "rare",
-    "Battery Cables": "common",
-    "Beer": "rare",
-    "Board Game": "rare",
-    "Book Children": "common",
-    "Book Cooking": "common",
-    "Book Fishing": "common",
-    "Book Religion": "common",
-    "Boots Combat": "common",
-    "Bucket": "common",
-    "Can Empty": "common",
-    "Canned Pea Soup": "common",
-    "Canned Pear": "common",
-    "Canned Peas": "common",
-    "Canned Tuna": "common",
-    "Cap M62": "common",
-    "Casette Symphony": "rare",
-    "Cigarettes": "rare",
-    "Coffeemaster": "legendary",
-    "Duffel Retro": "common",
-    "Fleece Tactical Green": "common",
-    "Gloves Leather": "common",
-    "Gloves Work": "common",
-    "Gum": "common",
-    "Hotplate": "common",
-    "Jacket M62": "common",
-    "Jaeger 140": "common",
-    "Jerry Can": "rare",
-    "Juice Orange": "common",
-    "Juice Raspberry": "common",
-    "Kobra": "rare",
-    "Kukkaro Black": "common",
-    "Lotion": "common",
-    "Map": "rare",
-    "Matches": "common",
-    "Melatonin": "common",
-    "Micro": "rare",
-    "Monster": "rare",
-    "Mosin": "common",
-    "MP5 Magazine": "common",
-    "MP5K": "common",
-    "Nails": "common",
-    "Narva": "common",
-    "Painkillers": "common",
-    "Pants Hiking": "common",
-    "Potato": "common",
-    "PU": "rare",
-    "Rags": "common",
-    "RK Magazine": "common",
-    "Soda Lemon": "rare",
-    "Sticks": "common",
-    "Sugar": "common",
-    "Tissues": "common",
-    "Tourniquet": "common",
-    "Vest Fishing": "common",
-    "Yeast": "common",
-}
+# Lazily-populated rarity lookup keyed by item stem-name (id with _ → space).
+_ITEM_RARITY: dict[str, str] = {}
+_RARITY_LOADED = False
+
+
+def _ensure_rarity_loaded() -> None:
+    global _RARITY_LOADED
+    if _RARITY_LOADED:
+        return
+    _RARITY_LOADED = True
+    if not ITEMS_JSON.exists():
+        return
+    try:
+        data = json.loads(ITEMS_JSON.read_text(encoding="utf-8"))
+        for item in data.get("items", []):
+            key = item.get("id", "").replace("_", " ")
+            rarity = item.get("rarity") or "common"
+            _ITEM_RARITY[key] = rarity
+    except Exception:
+        pass
 
 
 def _rarity_color(name: str) -> tuple[str, str] | None:
+    _ensure_rarity_loaded()
     return _RARITY_COLOURS.get(_ITEM_RARITY.get(name, "common"))
 
 

@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-08
+
+### Added
+
+- `scripts/build_item_db.py` (rewritten) — extracts item data directly from decompiled game files via GDRETools full recovery of `RTV.pck`; produces `data/items.json` (249 items) and `data/icons/` (246 PNGs) without any wiki dependency
+- `data/icons/` — item icon PNGs extracted from game files, bundled with the exe
+- `paths.py` — `ITEMS_JSON` and `ICONS_DIR` constants with `sys._MEIPASS` support for packaged builds
+- Ironman difficulty (`difficulty = 3`) — backup cards show `· Ironman` in red; save detail panel shows a red `⚠ Ironman — character is deleted on death` warning below the Difficulty row
+- `test_difficulty_names_ironman` added to test suite; traversal-guard tests for `restore_backup` and `delete_backup`; Ironman `parse_world` test
+
+### Changed
+
+- Item rarity colouring in the inventory table now loaded from `data/items.json` (game-authoritative) instead of a hardcoded wiki-sourced lookup table
+- `DIFFICULTY_NAMES` in `constants.py` extended with `3: "Ironman"`
+- `vostok-vault.spec` bundles `data/items.json` and `data/icons/` with the exe
+- README placeholder clone URL and outdated keyboard-nav limitation fixed
+- `delete_backup` — path-traversal guard added (was missing); rejects any path outside `BACKUP_DIR` or equal to it
+- `restore_backup` — traversal check now uses `is_relative_to()` and rejects `BACKUP_DIR` root itself
+- `save_settings` — now uses atomic `.tmp` + `replace()` write to avoid corruption on crash
+- `settings.py` — `import json` moved to module level
+- Both `_TagDialog` and `_SettingsDialog` now call `transient(parent)` so they stay above the main window
+- `_TagDialog` entry limited to 60 characters via Tk validation
+
+### Removed
+
+- `scripts/enrich_item_db.py` — wiki enrichment pipeline removed; game files are now the authoritative source
+- `scripts/check_wiki_updates.py` — wiki change detection no longer needed
+
 ## [0.2.0] - 2026-05-08
 
 ### Added
@@ -54,5 +82,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Thread safety** — `threading.RLock` protects all backup operations; symlink-safe path-traversal check on restore
 - **Portable exe** — single-file `dist/VostokVault.exe` (~18 MB) built with PyInstaller; fonts bundled
 
+[0.3.0]: https://github.com/jonigirl/vostok-vault/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/jonigirl/vostok-vault/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/jonigirl/vostok-vault/releases/tag/v0.1.0

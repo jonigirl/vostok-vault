@@ -98,7 +98,12 @@ def restore_backup(backup_path: Path) -> bool:
     with _lock:
         if not backup_path.exists():
             return False
-        if BACKUP_DIR.resolve() not in backup_path.resolve().parents:
+        try:
+            resolved = backup_path.resolve()
+            backup_root = BACKUP_DIR.resolve()
+        except OSError:
+            return False
+        if not resolved.is_relative_to(backup_root) or resolved == backup_root:
             return False
         _create_backup_locked("pre_restore")
         try:
@@ -147,6 +152,13 @@ def current_save_needs_backup() -> bool:
 def delete_backup(backup_path: Path) -> bool:
     with _lock:
         if not backup_path.exists():
+            return False
+        try:
+            resolved = backup_path.resolve()
+            backup_root = BACKUP_DIR.resolve()
+        except OSError:
+            return False
+        if not resolved.is_relative_to(backup_root) or resolved == backup_root:
             return False
         try:
             shutil.rmtree(backup_path)

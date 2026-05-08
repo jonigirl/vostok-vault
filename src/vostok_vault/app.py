@@ -19,7 +19,7 @@ from .constants import (
 from .fonts import get_font, init_font
 from .logging_setup import setup_logging
 from .paths import SAVE_DIR
-from .settings import load_settings
+from .settings import load_settings, save_settings
 from .watcher import SaveWatcher
 from .widgets.backup_list import BackupListPanel
 from .widgets.dialogs import _SettingsDialog, _TagDialog
@@ -80,6 +80,7 @@ class VostokVaultApp:
 
         self._build_ui()
         self._load_backups()
+        self.root.after(200, self._check_startup)
 
     def _build_ui(self) -> None:
         self.root.grid_columnconfigure(0, weight=0, minsize=LEFT_PANEL_WIDTH)
@@ -161,6 +162,33 @@ class VostokVaultApp:
             text_color=("gray60", "gray60"),
         )
         self._status.pack(side="left", padx=12, fill="x", expand=True)
+
+    def _check_startup(self) -> None:
+        settings = load_settings()
+        backups = bk.list_backups()
+
+        if not settings.get("first_run_done") and not backups and SAVE_DIR.exists():
+            updated = {**settings, "first_run_done": True}
+            save_settings(updated)
+            if messagebox.askyesno(
+                "Welcome to Vostok Vault",
+                "No backups found.\n\n"
+                "Create an initial 'OG Save' now to protect your run from the start?\n\n"
+                "You can always back up manually using '+ Backup Now'.",
+                parent=self.root,
+            ):
+                manifest = bk.create_backup("OG_Save")
+                if manifest:
+                    self._set_status("OG Save created — your run is protected.")
+                    self._load_backups()
+                else:
+                    self._set_status(
+                        "Could not create OG Save — save folder not found."
+                    )
+            return
+
+        if backups and bk.current_save_needs_backup():
+            self._set_status("Your current save has changed since your last backup.")
 
     def _load_backups(self) -> None:
         self._left.set_backups(bk.list_backups())

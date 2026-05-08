@@ -14,6 +14,8 @@ a = Analysis(
         (str(project_root / "assets" / "vostok-vault.ico"), "assets"),
         (str(project_root / "assets" / "fonts" / "AtkinsonHyperlegible-Regular.ttf"), "assets/fonts"),
         (str(project_root / "assets" / "fonts" / "AtkinsonHyperlegible-Bold.ttf"), "assets/fonts"),
+        (str(project_root / "data" / "items.json"), "data"),
+        (str(project_root / "data" / "icons"), "data/icons"),
     ],
     hiddenimports=[
         "customtkinter",

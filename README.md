@@ -12,6 +12,7 @@ Road to Vostok only saves progress when you enter a shelter. If you die outside,
 - **Inventory view** — see what's equipped on your character and what's in your shelters
 - **Mod tracking** — each backup records which mods were active and their versions
 - **Auto-backup** — watches your save folder and creates a backup automatically when the game saves
+- **Difficulty tracking** — shows Ironman (permadeath) warning on affected backups
 - **Tag and delete** — rename or remove old backups
 
 ## Requirements
@@ -24,7 +25,7 @@ Road to Vostok only saves progress when you enter a shelter. If you die outside,
 ## Installation
 
 ```powershell
-git clone https://github.com/your-username/vostok-vault.git
+git clone https://github.com/jonigirl/vostok-vault.git
 cd vostok-vault
 uv sync
 ```
@@ -82,7 +83,6 @@ Font files are licensed under the [SIL Open Font License 1.1](assets/fonts/OFL.t
 
 - **Windows only** — the save folder path is Windows-specific (`%APPDATA%\Road to Vostok\`)
 - **Storage tab** — may show non-inventory entries from some mods or game updates; scheduled for a future fix
-- **Backup list** — mouse-only; keyboard navigation not yet supported
 
 ## Troubleshooting
 
@@ -100,6 +100,6 @@ MIT — see [LICENSE](LICENSE).
 
 Vostok Vault is an unofficial fan project and is not affiliated with, endorsed by, or connected to Road to Vostok Ltd. in any way.
 
-Item data shown in the app is sourced from player save files and [roadtovostok.wiki](https://roadtovostok.wiki/) — an independent, community-run wiki that is itself not affiliated with Road to Vostok Ltd.
+Item data shown in the app is sourced from player save files and the game's own data files.
 
 All game content, assets, and trademarks are the property of Road to Vostok Ltd.

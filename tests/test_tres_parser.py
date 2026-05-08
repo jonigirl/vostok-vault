@@ -116,6 +116,13 @@ def test_parse_world_season_and_difficulty(tmp_path: Path) -> None:
     assert result["difficulty"] == 1
 
 
+def test_parse_world_difficulty_ironman(tmp_path: Path) -> None:
+    content = '[resource]\nday = 5\ntime = 3600.0\nseason = 2\ndifficulty = 3\nweather = "Clear"\n'
+    p = tmp_path / "World.tres"
+    p.write_text(content, encoding="utf-8")
+    assert parse_world(p)["difficulty"] == 3
+
+
 def test_parse_world_shelters(tmp_path: Path) -> None:
     p = tmp_path / "World.tres"
     p.write_text(WORLD_TRES, encoding="utf-8")

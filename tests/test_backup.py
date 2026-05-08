@@ -261,6 +261,35 @@ def test_restore_backup_copies_files(
     assert (save_dir / "World.tres").read_text(encoding="utf-8") == "restored_world"
 
 
+def test_restore_backup_rejects_path_outside_backup_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    save_dir = tmp_path / "save"
+    save_dir.mkdir()
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.SAVE_DIR", save_dir)
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", backup_dir)
+
+    outside = tmp_path / "outside_backup"
+    outside.mkdir()
+
+    assert restore_backup(outside) is False
+
+
+def test_restore_backup_rejects_backup_dir_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    save_dir = tmp_path / "save"
+    save_dir.mkdir()
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.SAVE_DIR", save_dir)
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", backup_dir)
+
+    assert restore_backup(backup_dir) is False
+
+
 # ---------------------------------------------------------------------------
 # delete_backup
 # ---------------------------------------------------------------------------
@@ -270,13 +299,43 @@ def test_delete_backup_missing_returns_false(tmp_path: Path) -> None:
     assert delete_backup(tmp_path / "nonexistent") is False
 
 
-def test_delete_backup_removes_directory(tmp_path: Path) -> None:
-    d = tmp_path / "to_delete"
+def test_delete_backup_removes_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", backup_dir)
+
+    d = backup_dir / "20240101_120000_manual"
     d.mkdir()
     (d / "manifest.json").write_text("{}", encoding="utf-8")
 
     assert delete_backup(d) is True
     assert not d.exists()
+
+
+def test_delete_backup_rejects_path_outside_backup_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", backup_dir)
+
+    outside = tmp_path / "outside"
+    outside.mkdir()
+
+    assert delete_backup(outside) is False
+    assert outside.exists()
+
+
+def test_delete_backup_rejects_backup_dir_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", backup_dir)
+
+    assert delete_backup(backup_dir) is False
 
 
 # ---------------------------------------------------------------------------

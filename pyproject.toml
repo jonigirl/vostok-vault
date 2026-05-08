@@ -1,6 +1,6 @@
 [project]
 name = "vostok-vault"
-version = "0.2.0"
+version = "0.3.0"
 description = "Save manager for Road to Vostok"
 readme = "README.md"
 requires-python = ">=3.12"
