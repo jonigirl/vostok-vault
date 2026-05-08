@@ -5,7 +5,7 @@ import customtkinter as ctk
 from ..constants import DIFFICULTY_NAMES, SEASON_NAMES
 from ..fonts import get_font
 from ..tres_parser import parse_character, parse_storage, parse_validator, parse_world
-from .inventory_view import InventoryTable
+from .inventory_view import InventoryTable, item_weight
 
 _MOD_DISPLAY_NAMES: dict[str, str] = {
     "CT-map": "Collapsed Tunnels",
@@ -15,6 +15,26 @@ _MOD_DISPLAY_NAMES: dict[str, str] = {
     "xp-skills-system": "XP & Skills System",
     "doinkoink-mcm": "Mod Configuration Menu",
 }
+
+
+def _format_created(iso: str) -> str:
+    """Return a friendlier created date: 'Today 10:44', 'Yesterday 10:44', or 'May 8  10:44'."""
+    import datetime
+
+    if len(iso) < 16:
+        return iso
+    try:
+        dt = datetime.datetime.fromisoformat(iso[:16])
+        today = datetime.date.today()
+        delta = today - dt.date()
+        time_part = dt.strftime("%H:%M")
+        if delta.days == 0:
+            return f"Today  {time_part}"
+        if delta.days == 1:
+            return f"Yesterday  {time_part}"
+        return f"{dt.day} {dt.strftime('%b')}  {time_part}"
+    except ValueError:
+        return iso[:16].replace("T", " ")
 
 
 def _format_weather_time(secs: float) -> str:
@@ -117,9 +137,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             ).grid(row=row, column=0, columnspan=2, sticky="w", padx=12, pady=(12, 2))
 
         row = 0
-        info_row("Tag", data.get("tag", "—"), row)
-        row += 1
-        info_row("Created", data.get("created", "—")[:16].replace("T", " "), row)
+        info_row("Created", _format_created(data.get("created", "—")), row)
         row += 1
 
         section_heading("WORLD", row)
@@ -255,6 +273,16 @@ class SaveDetailPanel(ctk.CTkFrame):
         table.pack(fill="x", padx=4, pady=4)
         table.populate(items_sorted)
 
+        total = sum(item_weight(i["item_name"]) for i in items_sorted)
+        if total > 0:
+            ctk.CTkLabel(
+                f,
+                text=f"Total weight: {total:.1f} kg",
+                font=ctk.CTkFont(family=font, size=13),
+                text_color=("gray65", "gray65"),
+                anchor="e",
+            ).pack(fill="x", padx=16, pady=(4, 8))
+
     def _populate_storage(self, data: dict) -> None:
         self._clear(self._storage_scroll)
         font = get_font()
@@ -290,8 +318,8 @@ class SaveDetailPanel(ctk.CTkFrame):
             header_btn = ctk.CTkButton(
                 section,
                 text=f"\u25b6  {header_text}",
-                fg_color=("gray78", "#1A1A2E"),
-                hover_color=("gray72", "#252545"),
+                fg_color=("gray85", "#2A2A40"),
+                hover_color=("gray78", "#32324E"),
                 text_color=("gray10", "gray90"),
                 anchor="w",
                 corner_radius=4,
@@ -318,21 +346,29 @@ class SaveDetailPanel(ctk.CTkFrame):
                     anchor="w",
                 ).pack(fill="x", padx=20, pady=(4, 4))
             else:
-                for item in items:
-                    cond = (
-                        f"{item['condition']}%"
-                        if item.get("condition") is not None
-                        else "\u2014"
-                    )
-                    amt = item.get("amount", 1)
-                    amt_str = f"  \xd7{amt}" if amt > 1 else ""
-                    line = f"{item['item_name']}{amt_str}  {cond}"
+                table_items = [
+                    {
+                        "slot": "",
+                        "item_name": i["item_name"],
+                        "condition": i["condition"],
+                        "amount": i["amount"],
+                        "attachments": [],
+                    }
+                    for i in items
+                ]
+                storage_table = InventoryTable(content_frame)
+                storage_table.pack(fill="x", padx=8, pady=(4, 4))
+                storage_table.populate(table_items)
+
+                total = sum(item_weight(i["item_name"]) for i in items)
+                if total > 0:
                     ctk.CTkLabel(
                         content_frame,
-                        text=line,
+                        text=f"Total weight: {total:.1f} kg",
                         font=ctk.CTkFont(family=font, size=13),
-                        anchor="w",
-                    ).pack(fill="x", padx=20, pady=2)
+                        text_color=("gray65", "gray65"),
+                        anchor="e",
+                    ).pack(fill="x", padx=16, pady=(0, 8))
 
             is_expanded = [False]
             header_btn.configure(
