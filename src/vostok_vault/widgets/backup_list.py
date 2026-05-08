@@ -12,11 +12,6 @@ class BackupCard(ctk.CTkFrame):
         self._on_click = on_click
         self._build()
         self._bind_clicks(self)
-        self.tk.call(self._w, "configure", "-takefocus", "1")
-        self.bind("<FocusIn>", self._on_focus_in)
-        self.bind("<FocusOut>", self._on_focus_out)
-        self.bind("<Return>", self._clicked)
-        self.bind("<space>", self._clicked)
 
     def _bind_clicks(self, widget) -> None:
         widget.bind("<Button-1>", self._clicked)
@@ -48,9 +43,19 @@ class BackupCard(ctk.CTkFrame):
         ).pack(fill="x", padx=10)
 
         ironman = self._data.get("difficulty") == 3
+        char_items = self._data.get("char_items")
+        storage_items = self._data.get("storage_items")
+        item_parts = []
+        if char_items is not None:
+            item_parts.append(f"{char_items} equipped")
+        if storage_items is not None:
+            item_parts.append(f"{storage_items} stored")
+
         subtitle = f"Day {day}  ·  {time_str}  ·  {mod_label}"
+        if item_parts:
+            subtitle += "  ·  " + "  ·  ".join(item_parts)
         if ironman:
-            subtitle += "  ·  Ironman"
+            subtitle += "  ·  ☠ Ironman"
         ctk.CTkLabel(
             self,
             text=subtitle,
@@ -61,12 +66,6 @@ class BackupCard(ctk.CTkFrame):
 
     def _clicked(self, _event=None) -> None:
         self._on_click(self._data)
-
-    def _on_focus_in(self, _event=None) -> None:
-        self.configure(border_width=2, border_color=("#3390FF", "#5599FF"))
-
-    def _on_focus_out(self, _event=None) -> None:
-        self.configure(border_width=0)
 
     def set_selected(self, selected: bool) -> None:
         color = ("#DDEEFF", "#1C3A58") if selected else ("gray90", "#2A2A2A")

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .mods import get_mod_names, parse_mod_config
 from .paths import BACKUP_DIR, SAVE_DIR, TRACKED_DIRS, TRACKED_FILES
-from .tres_parser import parse_world
+from .tres_parser import parse_character, parse_storage, parse_world
 
 log = logging.getLogger(__name__)
 
@@ -77,6 +77,11 @@ def _create_backup_locked(tag: str = "manual") -> dict | None:
             }
         )
 
+    char_items = len(parse_character(dest / "Character.tres"))
+    storage_items = sum(
+        len(parse_storage(dest / f)) for f in ("Cabin.tres", "Tent.tres")
+    )
+
     manifest = {
         "id": ts,
         "tag": tag,
@@ -86,6 +91,8 @@ def _create_backup_locked(tag: str = "manual") -> dict | None:
         "season": world["season"],
         "weather": world["weather"],
         "difficulty": world["difficulty"],
+        "char_items": char_items,
+        "storage_items": storage_items,
         "mods": mods,
     }
     tmp = dest / "manifest.json.tmp"
