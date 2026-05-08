@@ -119,15 +119,20 @@ class VostokVaultApp:
         ctk.CTkButton(
             toolbar, text="Rename Tag", width=100, command=self._on_rename, **btn_opts
         ).pack(side="left", padx=4, pady=9)
+
+        ctk.CTkFrame(toolbar, width=1, fg_color=("gray70", "gray40")).pack(
+            side="left", fill="y", padx=(8, 8), pady=10
+        )
+
         ctk.CTkButton(
             toolbar,
-            text="Delete",
-            width=80,
+            text="🗑  Delete",
+            width=92,
             fg_color="#7A1C1C",
             hover_color="#5C1010",
             command=self._on_delete,
             **btn_opts,
-        ).pack(side="left", padx=4, pady=9)
+        ).pack(side="left", padx=(0, 4), pady=9)
 
         self._watch_btn = ctk.CTkButton(
             toolbar,
