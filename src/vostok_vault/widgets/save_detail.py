@@ -69,6 +69,9 @@ class SaveDetailPanel(ctk.CTkFrame):
         super().__init__(parent, corner_radius=8, **kwargs)
         self._current: dict | None = None
         self._storage_expanded: dict[str, bool] = {}
+        self._char_expanded: dict[str, bool] = {}
+        self._storage_sort_key: str = "Name"
+        self._storage_sort_reverse: bool = False
         self._build()
 
     def _build(self) -> None:
@@ -92,7 +95,8 @@ class SaveDetailPanel(ctk.CTkFrame):
 
         storage_tab = self._tabs.tab("Storage")
         storage_tab.grid_rowconfigure(0, weight=0)
-        storage_tab.grid_rowconfigure(1, weight=1)
+        storage_tab.grid_rowconfigure(1, weight=0)
+        storage_tab.grid_rowconfigure(2, weight=1)
         storage_tab.grid_columnconfigure(0, weight=1)
 
         self._storage_filter_var = ctk.StringVar()
@@ -110,8 +114,38 @@ class SaveDetailPanel(ctk.CTkFrame):
         )
         self._storage_filter_var.trace_add("write", self._on_storage_filter_change)
 
+        sort_frame = ctk.CTkFrame(storage_tab, fg_color="transparent")
+        sort_frame.grid(row=1, column=0, sticky="ew", padx=8, pady=(0, 4))
+        ctk.CTkLabel(
+            sort_frame,
+            text="Sort:",
+            font=ctk.CTkFont(family=font, size=13),
+            text_color=("gray50", "gray60"),
+        ).pack(side="left", padx=(0, 6))
+        self._storage_sort_seg = ctk.CTkSegmentedButton(
+            sort_frame,
+            values=["Name", "Weight", "Condition", "Amount"],
+            command=self._on_storage_sort_key_change,
+            font=ctk.CTkFont(family=font, size=12),
+            height=28,
+        )
+        self._storage_sort_seg.set("Name")
+        self._storage_sort_seg.pack(side="left")
+        self._storage_sort_dir_btn = ctk.CTkButton(
+            sort_frame,
+            text="\u2191 Asc",
+            width=68,
+            height=28,
+            font=ctk.CTkFont(family=font, size=12),
+            fg_color=("gray80", "gray25"),
+            text_color=("gray10", "gray90"),
+            hover_color=("gray70", "gray35"),
+            command=self._on_storage_sort_toggle,
+        )
+        self._storage_sort_dir_btn.pack(side="left", padx=(6, 0))
+
         self._storage_scroll = ctk.CTkScrollableFrame(storage_tab)
-        self._storage_scroll.grid(row=1, column=0, sticky="nsew")
+        self._storage_scroll.grid(row=2, column=0, sticky="nsew")
 
         self._mods_scroll = ctk.CTkScrollableFrame(self._tabs.tab("Mods"))
         self._mods_scroll.grid(row=0, column=0, sticky="nsew")
@@ -139,6 +173,19 @@ class SaveDetailPanel(ctk.CTkFrame):
         ).pack(pady=60)
 
     def _on_storage_filter_change(self, *_args) -> None:
+        if self._current:
+            self._populate_storage(self._current)
+
+    def _on_storage_sort_key_change(self, value: str) -> None:
+        self._storage_sort_key = value
+        if self._current:
+            self._populate_storage(self._current)
+
+    def _on_storage_sort_toggle(self) -> None:
+        self._storage_sort_reverse = not self._storage_sort_reverse
+        self._storage_sort_dir_btn.configure(
+            text="\u2193 Desc" if self._storage_sort_reverse else "\u2191 Asc"
+        )
         if self._current:
             self._populate_storage(self._current)
 
@@ -322,16 +369,46 @@ class SaveDetailPanel(ctk.CTkFrame):
         def flush_group(group: str, rows: list[dict]) -> None:
             if not rows:
                 return
-            ctk.CTkLabel(
-                f,
-                text=group.upper(),
-                font=ctk.CTkFont(family=font, size=11),
-                text_color=("gray65", "gray65"),
+            group_key = group.lower()
+            is_expanded = [self._char_expanded.get(group_key, True)]
+            header_text = group.upper()
+
+            def make_char_toggle(btn, frame, flag, key, text):
+                def _toggle():
+                    if flag[0]:
+                        frame.pack_forget()
+                        btn.configure(text=f"\u25b6  {text}")
+                        flag[0] = False
+                    else:
+                        frame.pack(fill="x", padx=4, pady=(0, 4))
+                        btn.configure(text=f"\u25bc  {text}")
+                        flag[0] = True
+                    self._char_expanded[key] = flag[0]
+                return _toggle
+
+            section = ctk.CTkFrame(f, fg_color="transparent")
+            section.pack(fill="x", padx=0, pady=0)
+            expand_char = "\u25bc" if is_expanded[0] else "\u25b6"
+            header_btn = ctk.CTkButton(
+                section,
+                text=f"{expand_char}  {header_text}",
+                fg_color=("gray85", "#2A2A40"),
+                hover_color=("gray78", "#32324E"),
+                text_color=("gray10", "gray90"),
                 anchor="w",
-            ).pack(fill="x", padx=12, pady=(10, 2))
-            t = InventoryTable(f)
-            t.pack(fill="x", padx=4, pady=(0, 2))
+                corner_radius=4,
+                font=ctk.CTkFont(family=font, size=11),
+            )
+            header_btn.pack(fill="x", padx=4, pady=(8, 0))
+            content_frame = ctk.CTkFrame(section, fg_color="transparent")
+            t = InventoryTable(content_frame)
+            t.pack(fill="x", padx=4, pady=(0, 4))
             t.populate(rows)
+            if is_expanded[0]:
+                content_frame.pack(fill="x", padx=4, pady=(0, 4))
+            header_btn.configure(
+                command=make_char_toggle(header_btn, content_frame, is_expanded, group_key, header_text)
+            )
 
         for item in items_sorted:
             group = _SLOT_GROUP.get(item["slot"], "Other")
@@ -373,6 +450,17 @@ class SaveDetailPanel(ctk.CTkFrame):
 
             return _toggle
 
+        def _sort_key(i: dict):
+            name = display_name(i["item_name"]).lower()
+            if self._storage_sort_key == "Weight":
+                return (item_weight(i["item_name"]), name)
+            if self._storage_sort_key == "Condition":
+                cond = i.get("condition")
+                return (float(cond) if cond is not None else 0.0, name)
+            if self._storage_sort_key == "Amount":
+                return (float(i.get("amount", 1) or 1), name)
+            return (name, "")
+
         for filename in ("Cabin.tres", "Tent.tres"):
             storage_path = backup_path / filename
             label = filename.replace(".tres", "")
@@ -391,6 +479,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                 if filter_text
                 else all_items
             )
+            items = sorted(items, key=_sort_key, reverse=self._storage_sort_reverse)
             shown_count = (
                 f"  ({len(items)})" if items else ("  (0)" if filter_text else "")
             )
