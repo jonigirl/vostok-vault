@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Overview tab: removed redundant Tag row; date now shown in friendly format ("Today HH:MM", "Yesterday HH:MM", "8 May HH:MM")
+- Character tab: items grouped by category with section headings instead of a flat list
+- Storage tab: filter input added; section header shows dynamic item count; section expand state persists across filter redraws; filter matches both item ID and display name
+- Mods tab: Was Active column replaced with a status dot indicator (green/red)
+- Toolbar: Delete button separated with a 1 px divider and prefixed with a trash icon
+- Backup cards: equipped and stored item counts shown in card subtitle
+- Backup cards: friendly date format, colored border (red for Ironman, gray otherwise), visual polish throughout
+- Inventory table: display names, item icons, rarity colour dots, and weight lookup loaded from `data/items.json`
+- `_on_rename()` in `app.py`: manifest write now uses `.tmp` + `.replace()` atomic pattern
+- `_create_backup_locked()` in `backup.py`: single `datetime.now()` capture ensures folder name and `created` field are always identical
+- Secondary text (`gray55`) raised to `gray65` throughout for WCAG AA contrast compliance
+
 ## [0.3.0] - 2026-05-08
 
 ### Added
