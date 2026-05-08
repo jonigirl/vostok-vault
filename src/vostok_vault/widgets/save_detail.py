@@ -373,7 +373,6 @@ class SaveDetailPanel(ctk.CTkFrame):
 
             return _toggle
 
-        total_across = 0
         for filename in ("Cabin.tres", "Tent.tres"):
             storage_path = backup_path / filename
             label = filename.replace(".tres", "")
@@ -392,8 +391,6 @@ class SaveDetailPanel(ctk.CTkFrame):
                 if filter_text
                 else all_items
             )
-            total_across += len(items)
-
             shown_count = (
                 f"  ({len(items)})" if items else ("  (0)" if filter_text else "")
             )
@@ -466,17 +463,6 @@ class SaveDetailPanel(ctk.CTkFrame):
                     header_btn, content_frame, is_expanded, label, header_text
                 )
             )
-
-        tab_label = f"Storage ({total_across})" if total_across else "Storage"
-        try:
-            self._tabs._segmented_button.configure(
-                values=[
-                    v if not v.startswith("Storage") else tab_label
-                    for v in self._tabs._segmented_button.cget("values")
-                ]
-            )
-        except Exception:
-            pass
 
     def _populate_mods(self, data: dict) -> None:
         self._clear(self._mods_scroll)
