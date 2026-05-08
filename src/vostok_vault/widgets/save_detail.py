@@ -5,7 +5,27 @@ import customtkinter as ctk
 from ..constants import DIFFICULTY_NAMES, SEASON_NAMES
 from ..fonts import get_font
 from ..tres_parser import parse_character, parse_storage, parse_validator, parse_world
-from .inventory_view import InventoryTable, item_weight
+from .inventory_view import InventoryTable, display_name, item_weight
+
+_SLOT_GROUP: dict[str, str] = {
+    "Head": "Armour",
+    "Chest": "Armour",
+    "Torso": "Armour",
+    "Legs": "Armour",
+    "Hands": "Armour",
+    "Feet": "Armour",
+    "Primary": "Weapons",
+    "Secondary": "Weapons",
+    "Knife": "Weapons",
+    "Backpack": "Gear",
+    "Rig": "Gear",
+    "Belt": "Gear",
+    "Light": "Gear",
+    "Time": "Gear",
+    "Pocket1": "Pockets",
+    "Pocket2": "Pockets",
+    "Storage": "Storage",
+}
 
 _MOD_DISPLAY_NAMES: dict[str, str] = {
     "CT-map": "Collapsed Tunnels",
@@ -75,10 +95,12 @@ class SaveDetailPanel(ctk.CTkFrame):
         storage_tab.grid_columnconfigure(0, weight=1)
 
         self._storage_filter_var = ctk.StringVar()
+        font = get_font()
         self._storage_filter_entry = ctk.CTkEntry(
             storage_tab,
             placeholder_text="Filter items…",
             textvariable=self._storage_filter_var,
+            font=ctk.CTkFont(family=font, size=13),
             height=32,
             corner_radius=4,
         )
@@ -289,26 +311,6 @@ class SaveDetailPanel(ctk.CTkFrame):
             "Storage",
         ]
 
-        _SLOT_GROUP = {
-            "Head": "Armour",
-            "Chest": "Armour",
-            "Torso": "Armour",
-            "Legs": "Armour",
-            "Hands": "Armour",
-            "Feet": "Armour",
-            "Primary": "Weapons",
-            "Secondary": "Weapons",
-            "Knife": "Weapons",
-            "Backpack": "Gear",
-            "Rig": "Gear",
-            "Belt": "Gear",
-            "Light": "Gear",
-            "Time": "Gear",
-            "Pocket1": "Pockets",
-            "Pocket2": "Pockets",
-            "Storage": "Storage",
-        }
-
         order_map = {s: i for i, s in enumerate(slot_order)}
         items_sorted = sorted(items, key=lambda x: order_map.get(x["slot"], 99))
 
@@ -378,7 +380,12 @@ class SaveDetailPanel(ctk.CTkFrame):
                 all_items = parse_storage(storage_path)
 
             items = (
-                [i for i in all_items if filter_text in i["item_name"].lower()]
+                [
+                    i
+                    for i in all_items
+                    if filter_text in i["item_name"].lower()
+                    or filter_text in display_name(i["item_name"]).lower()
+                ]
                 if filter_text
                 else all_items
             )
@@ -453,7 +460,6 @@ class SaveDetailPanel(ctk.CTkFrame):
             )
 
         tab_label = f"Storage ({total_across})" if total_across else "Storage"
-        self._tabs.set(self._tabs.get())  # force tab bar refresh
         try:
             self._tabs._segmented_button.configure(
                 values=[
