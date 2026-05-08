@@ -5,7 +5,7 @@ All notable changes to Vostok Vault will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.0] - 2026-05-08
 
 ### Changed
 
@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `_on_rename()` in `app.py`: manifest write now uses `.tmp` + `.replace()` atomic pattern
 - `_create_backup_locked()` in `backup.py`: single `datetime.now()` capture ensures folder name and `created` field are always identical
 - Secondary text (`gray55`) raised to `gray65` throughout for WCAG AA contrast compliance
+
+### Fixed
+
+- Storage tab crash (`KeyError`) caused by mutating the CTkTabview internal segmented button label while tab dict keys remained unchanged
 
 ## [0.3.0] - 2026-05-08
 
@@ -96,6 +100,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Thread safety** — `threading.RLock` protects all backup operations; symlink-safe path-traversal check on restore
 - **Portable exe** — single-file `dist/VostokVault.exe` (~18 MB) built with PyInstaller; fonts bundled
 
+[0.4.0]: https://github.com/jonigirl/vostok-vault/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/jonigirl/vostok-vault/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/jonigirl/vostok-vault/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/jonigirl/vostok-vault/releases/tag/v0.1.0
