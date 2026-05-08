@@ -3,17 +3,18 @@ import json
 import customtkinter as ctk
 
 from ..fonts import get_font
-from ..paths import ITEMS_JSON
+from ..paths import ICONS_DIR, ITEMS_JSON
 
-# Rarity colouring: (light_mode_colour, dark_mode_colour).
-# "common" items use the default text colour — no entry needed.
 _RARITY_COLOURS: dict[str, tuple[str, str]] = {
     "rare": ("#2471A3", "#5DADE2"),
     "legendary": ("#B7770D", "#F0B027"),
 }
 
-# Lazily-populated rarity lookup keyed by item stem-name (id with _ → space).
 _ITEM_RARITY: dict[str, str] = {}
+_ITEM_DISPLAY_NAME: dict[str, str] = {}
+_ITEM_WEIGHT: dict[str, float] = {}
+_ITEM_ICON_FILE: dict[str, str] = {}
+_ITEM_ICON_CACHE: dict[str, ctk.CTkImage] = {}
 _RARITY_LOADED = False
 
 
@@ -28,8 +29,11 @@ def _ensure_rarity_loaded() -> None:
         data = json.loads(ITEMS_JSON.read_text(encoding="utf-8"))
         for item in data.get("items", []):
             key = item.get("id", "").replace("_", " ")
-            rarity = item.get("rarity") or "common"
-            _ITEM_RARITY[key] = rarity
+            _ITEM_RARITY[key] = item.get("rarity") or "common"
+            _ITEM_DISPLAY_NAME[key] = item.get("display_name") or key
+            _ITEM_WEIGHT[key] = float(item.get("weight") or 0.0)
+            if item.get("icon_file"):
+                _ITEM_ICON_FILE[key] = item["icon_file"]
     except Exception:
         pass
 
@@ -37,6 +41,38 @@ def _ensure_rarity_loaded() -> None:
 def _rarity_color(name: str) -> tuple[str, str] | None:
     _ensure_rarity_loaded()
     return _RARITY_COLOURS.get(_ITEM_RARITY.get(name, "common"))
+
+
+def display_name(stem: str) -> str:
+    """Return the human-readable display name for a stem-key, falling back to the stem."""
+    _ensure_rarity_loaded()
+    return _ITEM_DISPLAY_NAME.get(stem, stem)
+
+
+def item_weight(stem: str) -> float:
+    _ensure_rarity_loaded()
+    return _ITEM_WEIGHT.get(stem, 0.0)
+
+
+def _get_icon(stem: str) -> ctk.CTkImage | None:
+    if stem in _ITEM_ICON_CACHE:
+        return _ITEM_ICON_CACHE[stem]
+    _ensure_rarity_loaded()
+    icon_file = _ITEM_ICON_FILE.get(stem)
+    if not icon_file:
+        return None
+    icon_path = ICONS_DIR / icon_file
+    if not icon_path.exists():
+        return None
+    try:
+        from PIL import Image
+
+        img = Image.open(icon_path).resize((20, 20), Image.LANCZOS)
+        ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(20, 20))
+        _ITEM_ICON_CACHE[stem] = ctk_img
+        return ctk_img
+    except Exception:
+        return None
 
 
 class InventoryTable(ctk.CTkFrame):
@@ -74,36 +110,55 @@ class InventoryTable(ctk.CTkFrame):
                 anchor="w",
             ).grid(row=0, column=col, padx=6, pady=5, sticky="w")
 
+        _ensure_rarity_loaded()
+
         for item in items:
             cond = f"{item['condition']}%" if item.get("condition") is not None else "—"
-            item_name = item.get("item_name", "")
-            name_color = _rarity_color(item_name)
+            item_stem = item.get("item_name", "")
+            rarity = _ITEM_RARITY.get(item_stem, "common")
+            name_color = _RARITY_COLOURS.get(rarity)
+            icon = _get_icon(item_stem)
+            shown_name = display_name(item_stem)
             row_frame = ctk.CTkFrame(self, fg_color="transparent")
             row_frame.pack(fill="x", padx=2, pady=1)
+
+            slot_val = item.get("slot", "")
+            amt_val = (
+                "—" if item.get("amount", 1) in (0, 1) else str(item.get("amount", 1))
+            )
+
             for col, (val, w) in enumerate(
-                zip(
-                    [
-                        item.get("slot", ""),
-                        item_name,
-                        cond,
-                        "—"
-                        if item.get("amount", 1) in (0, 1)
-                        else str(item.get("amount", 1)),
-                    ],
-                    self.COL_WIDTHS,
-                )
+                zip([slot_val, shown_name, cond, amt_val], self.COL_WIDTHS)
             ):
-                label_kwargs: dict = {}
-                if col == 1 and name_color:
-                    label_kwargs["text_color"] = name_color
-                ctk.CTkLabel(
-                    row_frame,
-                    text=val,
-                    font=ctk.CTkFont(family=font, size=13),
-                    width=w,
-                    anchor="w",
-                    **label_kwargs,
-                ).grid(row=0, column=col, padx=6, pady=3, sticky="w")
+                if col == 1:
+                    cell = ctk.CTkFrame(row_frame, fg_color="transparent")
+                    cell.grid(row=0, column=col, padx=6, pady=3, sticky="w")
+                    if rarity in _RARITY_COLOURS:
+                        ctk.CTkLabel(
+                            cell,
+                            text="●",
+                            font=ctk.CTkFont(family=font, size=9),
+                            text_color=_RARITY_COLOURS[rarity],
+                        ).pack(side="left", padx=(0, 4))
+                    if icon:
+                        ctk.CTkLabel(cell, image=icon, text="").pack(
+                            side="left", padx=(0, 4)
+                        )
+                    name_kw: dict = {
+                        "font": ctk.CTkFont(family=font, size=13),
+                        "anchor": "w",
+                    }
+                    if name_color:
+                        name_kw["text_color"] = name_color
+                    ctk.CTkLabel(cell, text=val, **name_kw).pack(side="left")
+                else:
+                    ctk.CTkLabel(
+                        row_frame,
+                        text=val,
+                        font=ctk.CTkFont(family=font, size=13),
+                        width=w,
+                        anchor="w",
+                    ).grid(row=0, column=col, padx=6, pady=3, sticky="w")
 
             for att in item.get("attachments", []):
                 att_row = ctk.CTkFrame(self, fg_color="transparent")
@@ -115,7 +170,7 @@ class InventoryTable(ctk.CTkFrame):
                 ).grid(row=0, column=0, padx=6)
                 ctk.CTkLabel(
                     att_row,
-                    text=f"  ↳ {att}",
+                    text=f"  ↳ {display_name(att)}",
                     font=ctk.CTkFont(family=font, size=13),
                     text_color=("gray55", "gray55"),
                     anchor="w",
