@@ -94,7 +94,7 @@ class InventoryTable(ctk.CTkFrame):
             ctk.CTkLabel(
                 self,
                 text="No items found.",
-                text_color=("gray55", "gray55"),
+                text_color=("gray65", "gray65"),
                 font=ctk.CTkFont(family=font, size=13),
             ).pack(pady=10)
             return
@@ -172,6 +172,6 @@ class InventoryTable(ctk.CTkFrame):
                     att_row,
                     text=f"  ↳ {display_name(att)}",
                     font=ctk.CTkFont(family=font, size=13),
-                    text_color=("gray55", "gray55"),
+                    text_color=("gray65", "gray65"),
                     anchor="w",
                 ).grid(row=0, column=1, padx=6, sticky="w")

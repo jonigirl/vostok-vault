@@ -272,7 +272,6 @@ class SaveDetailPanel(ctk.CTkFrame):
 
         backup_path = Path(data.get("_path", ""))
         char_file = backup_path / "Character.tres"
-        items = parse_character(char_file)
 
         if not char_file.exists():
             ctk.CTkLabel(
@@ -282,6 +281,8 @@ class SaveDetailPanel(ctk.CTkFrame):
                 text_color=("gray70", "gray70"),
             ).pack(pady=20)
             return
+
+        items = parse_character(char_file)
 
         if not items:
             ctk.CTkLabel(

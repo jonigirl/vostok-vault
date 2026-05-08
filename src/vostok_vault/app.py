@@ -274,9 +274,9 @@ class VostokVaultApp:
             with bk._lock:
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
                 manifest["tag"] = sanitised
-                manifest_path.write_text(
-                    json.dumps(manifest, indent=2), encoding="utf-8"
-                )
+                tmp = manifest_path.with_suffix(".json.tmp")
+                tmp.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+                tmp.replace(manifest_path)
         except (OSError, json.JSONDecodeError):
             self._set_status("Rename failed")
             return

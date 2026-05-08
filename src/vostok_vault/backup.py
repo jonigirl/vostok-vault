@@ -49,6 +49,7 @@ def _create_backup_locked(tag: str = "manual") -> dict | None:
     if not SAVE_DIR.exists():
         return None
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    created_iso = datetime.now().isoformat(timespec="seconds")
     folder_name = f"{ts}_{_sanitise_tag(tag)}"
     dest = BACKUP_DIR / folder_name
     dest.mkdir(parents=True, exist_ok=True)
@@ -85,7 +86,7 @@ def _create_backup_locked(tag: str = "manual") -> dict | None:
     manifest = {
         "id": ts,
         "tag": tag,
-        "created": datetime.now().isoformat(timespec="seconds"),
+        "created": created_iso,
         "game_day": world["day"],
         "game_time": world["time_str"],
         "season": world["season"],

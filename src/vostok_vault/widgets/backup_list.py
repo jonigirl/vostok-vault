@@ -55,7 +55,7 @@ class BackupCard(ctk.CTkFrame):
             text=_format_card_date(created),
             font=ctk.CTkFont(family=font, size=13),
             anchor="w",
-            text_color=("gray55", "gray55"),
+            text_color=("gray65", "gray65"),
         ).pack(fill="x", padx=10)
 
         ironman = self._data.get("difficulty") == 3
@@ -77,7 +77,7 @@ class BackupCard(ctk.CTkFrame):
             text=subtitle,
             font=ctk.CTkFont(family=font, size=13),
             anchor="w",
-            text_color=("#C0392B", "#E74C3C") if ironman else ("gray55", "gray55"),
+            text_color=("#C0392B", "#E74C3C") if ironman else ("gray65", "gray65"),
         ).pack(fill="x", padx=10, pady=(0, 8))
 
         self.configure(
@@ -124,7 +124,7 @@ class BackupListPanel(ctk.CTkFrame):
             text="No backups yet.\nUse '+ Backup Now' to create one.",
             wraplength=220,
             justify="center",
-            text_color=("gray55", "gray55"),
+            text_color=("gray65", "gray65"),
             font=ctk.CTkFont(family=font, size=13),
         )
 
