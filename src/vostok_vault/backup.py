@@ -48,8 +48,9 @@ def create_backup(tag: str = "manual") -> dict | None:
 def _create_backup_locked(tag: str = "manual") -> dict | None:
     if not SAVE_DIR.exists():
         return None
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    created_iso = datetime.now().isoformat(timespec="seconds")
+    _now = datetime.now()
+    ts = _now.strftime("%Y%m%d_%H%M%S")
+    created_iso = _now.isoformat(timespec="seconds")
     folder_name = f"{ts}_{_sanitise_tag(tag)}"
     dest = BACKUP_DIR / folder_name
     dest.mkdir(parents=True, exist_ok=True)
