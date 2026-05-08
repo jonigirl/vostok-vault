@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from typing import Callable
 
 import customtkinter as ctk
@@ -5,9 +6,24 @@ import customtkinter as ctk
 from ..fonts import get_font
 
 
+def _format_card_date(iso: str) -> str:
+    if not iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(iso)
+        today = date.today()
+        if dt.date() == today:
+            return f"Today  {dt.strftime('%H:%M')}"
+        if dt.date().toordinal() == today.toordinal() - 1:
+            return f"Yesterday  {dt.strftime('%H:%M')}"
+        return f"{dt.day} {dt.strftime('%b')}  {dt.strftime('%H:%M')}"
+    except (ValueError, TypeError):
+        return iso[:16].replace("T", " ")
+
+
 class BackupCard(ctk.CTkFrame):
     def __init__(self, parent, data: dict, on_click: Callable, **kwargs) -> None:
-        super().__init__(parent, corner_radius=6, **kwargs)
+        super().__init__(parent, corner_radius=6, border_width=1, **kwargs)
         self._data = data
         self._on_click = on_click
         self._build()
@@ -21,7 +37,7 @@ class BackupCard(ctk.CTkFrame):
     def _build(self) -> None:
         font = get_font()
         tag = self._data.get("tag", "untitled")
-        created = self._data.get("created", "")[:16].replace("T", " ")
+        created = self._data.get("created", "")
         day = self._data.get("game_day", "?")
         time_str = self._data.get("game_time", "??:??")
         mod_count = len(self._data.get("mods", []))
@@ -36,7 +52,7 @@ class BackupCard(ctk.CTkFrame):
 
         ctk.CTkLabel(
             self,
-            text=created,
+            text=_format_card_date(created),
             font=ctk.CTkFont(family=font, size=13),
             anchor="w",
             text_color=("gray55", "gray55"),
@@ -63,6 +79,10 @@ class BackupCard(ctk.CTkFrame):
             anchor="w",
             text_color=("#C0392B", "#E74C3C") if ironman else ("gray55", "gray55"),
         ).pack(fill="x", padx=10, pady=(0, 8))
+
+        self.configure(
+            border_color=("#C0392B", "#E74C3C") if ironman else ("gray70", "gray35")
+        )
 
     def _clicked(self, _event=None) -> None:
         self._on_click(self._data)
