@@ -68,6 +68,7 @@ class SaveDetailPanel(ctk.CTkFrame):
     def __init__(self, parent, **kwargs) -> None:
         super().__init__(parent, corner_radius=8, **kwargs)
         self._current: dict | None = None
+        self._storage_expanded: dict[str, bool] = {}
         self._build()
 
     def _build(self) -> None:
@@ -357,7 +358,7 @@ class SaveDetailPanel(ctk.CTkFrame):
         backup_path = Path(data.get("_path", ""))
         filter_text = self._storage_filter_var.get().lower().strip()
 
-        def make_toggle(btn, frame, flag, header_text):
+        def make_toggle(btn, frame, flag, key, header_text):
             def _toggle():
                 if flag[0]:
                     frame.pack_forget()
@@ -367,6 +368,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                     frame.pack(fill="x", padx=4, pady=(0, 8))
                     btn.configure(text=f"\u25bc  {header_text}")
                     flag[0] = True
+                self._storage_expanded[key] = flag[0]
 
             return _toggle
 
@@ -454,9 +456,14 @@ class SaveDetailPanel(ctk.CTkFrame):
                         anchor="e",
                     ).pack(fill="x", padx=16, pady=(0, 8))
 
-            is_expanded = [False]
+            is_expanded = [self._storage_expanded.get(label, bool(filter_text))]
+            if is_expanded[0]:
+                content_frame.pack(fill="x", padx=4, pady=(0, 8))
+                header_btn.configure(text=f"\u25bc  {header_text}")
             header_btn.configure(
-                command=make_toggle(header_btn, content_frame, is_expanded, header_text)
+                command=make_toggle(
+                    header_btn, content_frame, is_expanded, label, header_text
+                )
             )
 
         tab_label = f"Storage ({total_across})" if total_across else "Storage"
