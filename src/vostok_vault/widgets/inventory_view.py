@@ -67,8 +67,8 @@ def _get_icon(stem: str) -> ctk.CTkImage | None:
     try:
         from PIL import Image
 
-        img = Image.open(icon_path).resize((20, 20), Image.LANCZOS)
-        ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(20, 20))
+        img = Image.open(icon_path).resize((28, 28), Image.LANCZOS)
+        ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(28, 28))
         _ITEM_ICON_CACHE[stem] = ctk_img
         return ctk_img
     except Exception:
@@ -79,7 +79,7 @@ class InventoryTable(ctk.CTkFrame):
     """Reusable grid table for inventory items."""
 
     HEADERS = ["Slot", "Item", "Condition", "Amount"]
-    COL_WIDTHS = [130, 230, 90, 65]
+    COL_WIDTHS = [130, 250, 90, 65]
 
     def __init__(self, parent, **kwargs) -> None:
         super().__init__(parent, fg_color="transparent", **kwargs)
@@ -120,7 +120,7 @@ class InventoryTable(ctk.CTkFrame):
             icon = _get_icon(item_stem)
             shown_name = display_name(item_stem)
             row_frame = ctk.CTkFrame(self, fg_color="transparent")
-            row_frame.pack(fill="x", padx=2, pady=1)
+            row_frame.pack(fill="x", padx=2, pady=3)
 
             slot_val = item.get("slot", "")
             amt_val = (
@@ -145,7 +145,7 @@ class InventoryTable(ctk.CTkFrame):
                             side="left", padx=(0, 4)
                         )
                     name_kw: dict = {
-                        "font": ctk.CTkFont(family=font, size=13),
+                        "font": ctk.CTkFont(family=font, size=14),
                         "anchor": "w",
                     }
                     if name_color:
@@ -155,10 +155,10 @@ class InventoryTable(ctk.CTkFrame):
                     ctk.CTkLabel(
                         row_frame,
                         text=val,
-                        font=ctk.CTkFont(family=font, size=13),
+                        font=ctk.CTkFont(family=font, size=14),
                         width=w,
                         anchor="w",
-                    ).grid(row=0, column=col, padx=6, pady=3, sticky="w")
+                    ).grid(row=0, column=col, padx=6, pady=4, sticky="w")
 
             for att in item.get("attachments", []):
                 att_row = ctk.CTkFrame(self, fg_color="transparent")
