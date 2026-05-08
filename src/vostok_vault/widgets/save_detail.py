@@ -266,12 +266,55 @@ class SaveDetailPanel(ctk.CTkFrame):
             "Pocket2",
             "Storage",
         ]
+
+        _SLOT_GROUP = {
+            "Head": "Armour",
+            "Chest": "Armour",
+            "Torso": "Armour",
+            "Legs": "Armour",
+            "Hands": "Armour",
+            "Feet": "Armour",
+            "Primary": "Weapons",
+            "Secondary": "Weapons",
+            "Knife": "Weapons",
+            "Backpack": "Gear",
+            "Rig": "Gear",
+            "Belt": "Gear",
+            "Light": "Gear",
+            "Time": "Gear",
+            "Pocket1": "Pockets",
+            "Pocket2": "Pockets",
+            "Storage": "Storage",
+        }
+
         order_map = {s: i for i, s in enumerate(slot_order)}
         items_sorted = sorted(items, key=lambda x: order_map.get(x["slot"], 99))
 
-        table = InventoryTable(f)
-        table.pack(fill="x", padx=4, pady=4)
-        table.populate(items_sorted)
+        last_group = None
+        group_items: list[dict] = []
+
+        def flush_group(group: str, rows: list[dict]) -> None:
+            if not rows:
+                return
+            ctk.CTkLabel(
+                f,
+                text=group.upper(),
+                font=ctk.CTkFont(family=font, size=11),
+                text_color=("gray65", "gray65"),
+                anchor="w",
+            ).pack(fill="x", padx=12, pady=(10, 2))
+            t = InventoryTable(f)
+            t.pack(fill="x", padx=4, pady=(0, 2))
+            t.populate(rows)
+
+        for item in items_sorted:
+            group = _SLOT_GROUP.get(item["slot"], "Other")
+            if group != last_group:
+                flush_group(last_group or "", group_items)
+                group_items = []
+                last_group = group
+            group_items.append(item)
+        flush_group(last_group or "", group_items)
 
         total = sum(item_weight(i["item_name"]) for i in items_sorted)
         if total > 0:
