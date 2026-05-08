@@ -75,7 +75,7 @@ Debug logging is **off by default**. Enable it in **⚙ Settings** to record det
 
 ## Font
 
-Vostok Vault ships with [Atkinson Hyperlegible](https://brailleinstitute.org/freefont) as the default font — an open-source typeface designed for readability and low-vision users. An OpenDyslexic option is available in **⚙ Settings**.
+Vostok Vault ships with [Atkinson Hyperlegible](https://brailleinstitute.org/freefont) as the default font — an open-source typeface designed for readability and low-vision users. An [OpenDyslexic](https://opendyslexic.org/) option is available in **⚙ Settings** if OpenDyslexic is installed on your system.
 
 Font files are licensed under the [SIL Open Font License 1.1](assets/fonts/OFL.txt).
 
