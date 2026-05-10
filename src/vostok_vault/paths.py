@@ -12,8 +12,8 @@ def _bundle_root() -> Path:
 
 
 ITEMS_JSON = _bundle_root() / "data" / "items.json"
+TRADERS_CATALOG_JSON = _bundle_root() / "data" / "traders_catalog.json"
 ICONS_DIR = _bundle_root() / "data" / "icons"
-TRADERS_DIR = _bundle_root() / "data" / "game_full" / "Traders"
 BACKUP_DIR = SAVE_DIR / "vostok-vault-backups"
 
 GAME_TRACKED_FILES = [

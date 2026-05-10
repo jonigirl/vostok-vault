@@ -157,7 +157,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             text="Category:",
             font=ctk.CTkFont(family=font, size=13),
             text_color=("gray50", "gray60"),
-        ).pack(side="left", padx=(0, 6))
+        ).pack(side="right", padx=(6, 0))
         self._storage_category_var = ctk.StringVar(value="All")
         self._storage_category_menu = ctk.CTkOptionMenu(
             cat_frame,
@@ -167,7 +167,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             width=160,
             command=self._on_storage_category_change,
         )
-        self._storage_category_menu.pack(side="left")
+        self._storage_category_menu.pack(side="right")
 
         sort_frame = ctk.CTkFrame(storage_tab, fg_color="transparent")
         sort_frame.grid(row=2, column=0, sticky="ew", padx=8, pady=(0, 4))
@@ -885,7 +885,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             return
 
         completed: dict[str, list[str]] = self._cached_traders
-        catalog: dict[str, list[str]] = load_trader_task_catalog()
+        catalog: dict[str, dict] = load_trader_task_catalog()
 
         # Fall back to completed keys if catalog not available
         all_trader_keys = list(catalog.keys()) if catalog else list(completed.keys())
@@ -924,11 +924,22 @@ class SaveDetailPanel(ctk.CTkFrame):
 
         for trader_key in all_trader_keys:
             done_set = set(completed.get(trader_key, []))
-            all_tasks = catalog.get(trader_key, sorted(done_set))
+            entry = catalog.get(trader_key, {})
+            all_tasks = (
+                entry.get("tasks", sorted(done_set)) if entry else sorted(done_set)
+            )
+            base_tax = entry.get("base_tax", 100) if entry else 100
             done_count = sum(1 for t in all_tasks if t in done_set)
             total_count = len(all_tasks)
+            if total_count > 0:
+                current_tax = (
+                    round(base_tax * (1.0 - done_count / total_count) / 10) * 10
+                )
+            else:
+                current_tax = base_tax
             header_text = trader_key.replace("_", " ").title()
-            count_text = f"  ({done_count} / {total_count})"
+            tax_text = f"Tax: {current_tax}%"
+            count_text = f"  —  {tax_text}  ({done_count} / {total_count})"
             is_expanded = [self._traders_expanded.get(trader_key, False)]
             self._traders_expanded[trader_key] = is_expanded[0]
             expand_char = "\u25bc" if is_expanded[0] else "\u25b6"

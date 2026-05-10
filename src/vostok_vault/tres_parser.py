@@ -364,27 +364,16 @@ def parse_traders(path: Path) -> dict[str, list[str]]:
     return result
 
 
-def load_trader_task_catalog(traders_dir: Path | None = None) -> dict[str, list[str]]:
-    """Return {trader_key: [task_name, ...]} sourced from game data task files.
+def load_trader_task_catalog() -> dict[str, dict]:
+    """Return {trader_key: {"tasks": [...], "base_tax": int}} from the bundled catalog.
 
-    Task names are derived from filenames inside each trader's Tasks/ folder,
-    stripping the numeric prefix (e.g. '01_Prime_Time.tres' → 'Prime Time').
-    The trader key is the folder name lowercased to match Traders.tres field names.
-    Returns an empty dict if the game data directory is not present.
+    Returns an empty dict if the catalog file is not present.
     """
-    if traders_dir is None:
-        from .paths import TRADERS_DIR  # noqa: PLC0415
+    import json  # noqa: PLC0415
 
-        traders_dir = TRADERS_DIR
-    catalog: dict[str, list[str]] = {}
-    if not traders_dir.exists():
-        return catalog
-    for tasks_dir in sorted(traders_dir.glob("*/Tasks")):
-        trader_key = tasks_dir.parent.name.lower()
-        task_names = []
-        for task_file in sorted(tasks_dir.glob("*.tres")):
-            name = re.sub(r"^\d+_", "", task_file.stem).replace("_", " ")
-            task_names.append(name)
-        if task_names:
-            catalog[trader_key] = task_names
-    return catalog
+    from .paths import TRADERS_CATALOG_JSON  # noqa: PLC0415
+
+    if not TRADERS_CATALOG_JSON.exists():
+        return {}
+    with TRADERS_CATALOG_JSON.open(encoding="utf-8") as fh:
+        return json.load(fh)
