@@ -736,10 +736,9 @@ class SaveDetailPanel(ctk.CTkFrame):
         active_filter = bool(filter_text or selected_cat != "All")
 
         for shelter_name in SHELTER_NAMES:
-            storage_path = backup_path / f"{shelter_name}.tres"
             all_items: list[dict] = self._cached_shelters.get(shelter_name, [])
 
-            if not all_items and not storage_path.exists():
+            if not all_items:
                 continue
 
             shelter_section = ctk.CTkFrame(f, fg_color="transparent")
@@ -752,31 +751,11 @@ class SaveDetailPanel(ctk.CTkFrame):
                 anchor="w",
             ).pack(fill="x", padx=8, pady=(6, 2))
 
-            if not storage_path.exists():
-                ctk.CTkLabel(
-                    shelter_section,
-                    text="[not found in this backup]",
-                    font=ctk.CTkFont(family=font, size=13),
-                    text_color=("gray70", "gray70"),
-                    anchor="w",
-                ).pack(fill="x", padx=16, pady=(2, 4))
-                continue
-
             # Group by container name; "" = floor/uncategorised
             containers: dict[str, list[dict]] = {}
             for item in all_items:
                 key = item.get("container", "")
                 containers.setdefault(key, []).append(item)
-
-            if not containers:
-                ctk.CTkLabel(
-                    shelter_section,
-                    text="Empty",
-                    font=ctk.CTkFont(family=font, size=13),
-                    text_color=("gray70", "gray70"),
-                    anchor="w",
-                ).pack(fill="x", padx=16, pady=(2, 4))
-                continue
 
             shelter_total_weight: float = 0.0
             for container_label, raw_items in sorted(
@@ -879,8 +858,11 @@ class SaveDetailPanel(ctk.CTkFrame):
         completed: dict[str, list[str]] = self._cached_traders
         catalog: dict[str, dict] = load_trader_task_catalog()
 
-        # Fall back to completed keys if catalog not available
-        all_trader_keys = list(catalog.keys()) if catalog else list(completed.keys())
+        # Only show traders the player has encountered in this save
+        if catalog:
+            all_trader_keys = [k for k in catalog.keys() if k in completed]
+        else:
+            all_trader_keys = list(completed.keys())
         if not all_trader_keys:
             ctk.CTkLabel(
                 f,
