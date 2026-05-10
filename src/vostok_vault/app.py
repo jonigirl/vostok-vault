@@ -18,7 +18,7 @@ from .constants import (
     WINDOW_MIN_HEIGHT,
     WINDOW_MIN_WIDTH,
 )
-from .fonts import get_font, init_font
+from .fonts import get_font, init_font, unload_bundled_fonts
 from .logging_setup import setup_logging
 from .paths import SAVE_DIR
 from .settings import load_settings, save_settings
@@ -395,6 +395,7 @@ class VostokVaultApp:
 
     def _on_close(self) -> None:
         self._watcher.stop()
+        unload_bundled_fonts()
         self.root.destroy()
 
     def run(self) -> None:

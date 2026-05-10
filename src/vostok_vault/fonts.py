@@ -30,12 +30,26 @@ def _load_font_windows(ttf_path: Path) -> bool:
     return False
 
 
+_loaded_font_paths: list[Path] = []
+
+
 def _load_bundled_fonts() -> None:
     fonts_dir = _fonts_dir()
     for name in ("AtkinsonHyperlegible-Regular.ttf", "AtkinsonHyperlegible-Bold.ttf"):
         f = fonts_dir / name
-        if f.exists():
-            _load_font_windows(f)
+        if f.exists() and _load_font_windows(f):
+            _loaded_font_paths.append(f)
+
+
+def unload_bundled_fonts() -> None:
+    if sys.platform != "win32" or not _loaded_font_paths:
+        return
+    try:
+        for path in _loaded_font_paths:
+            ctypes.windll.gdi32.RemoveFontResourceW(str(path))
+        ctypes.windll.user32.SendMessageTimeoutW(0xFFFF, 0x001D, 0, 0, 0, 1000, None)
+    except Exception:
+        pass
 
 
 def init_font(preferred: str | None = None) -> str:

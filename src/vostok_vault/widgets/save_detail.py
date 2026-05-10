@@ -394,6 +394,17 @@ class SaveDetailPanel(ctk.CTkFrame):
             return
         active_tab = self._tabs.get()
         self._populate_tab(active_tab, data)
+        all_tabs = ["Overview", "Character", "Storage", "Traders", "Mods"]
+        remaining = [t for t in all_tabs if t != active_tab]
+        self._prefill_tabs(data, remaining)
+
+    def _prefill_tabs(self, data: dict, tabs: list[str]) -> None:
+        if not tabs or self._current is not data:
+            return
+        tab, rest = tabs[0], tabs[1:]
+        if tab not in self._tabs_populated:
+            self._populate_tab(tab, data)
+        self.after(0, lambda: self._prefill_tabs(data, rest))
 
     def _populate_tab(self, tab: str, data: dict) -> None:
         t0 = time.perf_counter()
