@@ -276,7 +276,9 @@ class SaveDetailPanel(ctk.CTkFrame):
             row += 1
 
         char_items_parsed = parse_character(backup_path / "Character.tres")
-        storage_items_parsed = parse_storage(backup_path / "Storage.tres")
+        storage_items_parsed = parse_storage(
+            backup_path / "Cabin.tres"
+        ) + parse_storage(backup_path / "Tent.tres")
         all_stems = [
             i["item_name"].replace("_", " ")
             for i in char_items_parsed + storage_items_parsed
@@ -297,10 +299,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                 info_row("Items", "  ·  ".join(parts), row)
                 row += 1
 
-        ctk.CTkLabel(
-            font=ctk.CTkFont(family=font, size=14, weight="bold"),
-            anchor="w",
-        ).grid(row=row, column=0, columnspan=2, sticky="w", padx=12, pady=(16, 4))
+        section_heading("ACTIVE MODS", row)
         row += 1
 
         mods = [m for m in data.get("mods", []) if m.get("enabled")]

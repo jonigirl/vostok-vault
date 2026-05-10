@@ -237,31 +237,6 @@ class _SettingsDialog(ctk.CTkToplevel):
             justify="left",
         ).pack(padx=20, pady=(0, 12), anchor="w")
 
-        ctk.CTkButton(
-            debug_row,
-            text="Open log folder",
-            font=ctk.CTkFont(family=font, size=12),
-            width=120,
-            command=lambda: os.startfile(str(LOG_FILE.parent)),
-        ).pack(side="right")
-
-        ctk.CTkLabel(
-            self,
-            text=f"Log: {LOG_FILE}",
-            font=ctk.CTkFont(family=font, size=10),
-            text_color=("gray55", "gray55"),
-            wraplength=320,
-            justify="left",
-        ).pack(padx=20, pady=(0, 8), anchor="w")
-
-        ctk.CTkLabel(
-            self,
-            text="Log path contains your Windows username.",
-            font=ctk.CTkFont(family=font, size=11),
-            text_color=("gray65", "gray65"),
-            anchor="w",
-        ).pack(padx=20, pady=(0, 8), fill="x")
-
         self._msg_label = ctk.CTkLabel(
             self,
             text="",

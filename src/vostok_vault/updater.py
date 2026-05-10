@@ -44,13 +44,16 @@ def check_for_update() -> dict | None:
         if not tag:
             return None
         if _parse_semver(tag) > current:
+            raw_url = data.get("html_url", "")
+            url = (
+                raw_url
+                if raw_url.startswith("https://")
+                else "https://github.com/jonigirl/vostok-vault/releases"
+            )
             return {
                 "version": tag,
                 "notes": data.get("body", ""),
-                "url": data.get(
-                    "html_url",
-                    "https://github.com/jonigirl/vostok-vault/releases",
-                ),
+                "url": url,
             }
     except Exception as e:
         log.debug("Update check failed: %s", e)
