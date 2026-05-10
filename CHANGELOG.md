@@ -5,6 +5,31 @@ All notable changes to Vostok Vault will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-05-11
+
+### Added
+
+- **Traders tab** — shows all traders present in the save with their full task list; each task marked ✓ (complete) or ○ (incomplete); live tax rate displayed per trader; traders ordered by in-game encounter sequence (generalist → doctor → gunsmith); bundled static catalog (`data/traders_catalog.json`) so task names are always available without parsing game files
+- **MCM settings tab** — displays Mod Configuration Menu settings for each backup, grouped by mod
+- **Auto-update checker** — checks GitHub releases for a newer version; toggle in Settings; toolbar button appears when an update is available
+- **Storage: container grouping** — shelter items now grouped under the named furniture container they are stored in (e.g. Freezer, Shelf); floor items listed separately
+- **Storage: category filter** — filter storage items by category (Weapons, Ammo, Medical, etc.)
+- **Rarity sort and weight column** — inventory table supports sorting by rarity; weight column added
+- **File watcher recovery** — watcher now recovers gracefully if `SAVE_DIR` disappears (e.g. game uninstalled or drive ejected) and resumes when it returns
+- `TRACKED_FILES` split into `GAME_TRACKED_FILES` and `MOD_TRACKED_FILES` for finer change detection
+
+### Changed
+
+- Backup selection performance: `.tres` files parsed off the UI thread; each tab renders lazily on first open; all tabs show a loading indicator while parsing
+- Storage tab: shelters with no items are hidden entirely (previously showed an "Empty" label)
+- Traders tab: only traders present in the current save are shown (previously showed all catalog traders regardless of save state)
+- Grid column widths aligned consistently across Character and Storage tabs
+- UI polish: collapse-all button defaults, icon sizes, layout spacing throughout
+
+### Fixed
+
+- Backup manifest `storage_items` count now covers all 5 shelter types (Cabin, Tent, Attic, Classroom, Bunker); previously only Cabin and Tent were counted
+
 ## [0.4.0] - 2026-05-08
 
 ### Changed
@@ -100,6 +125,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Thread safety** — `threading.RLock` protects all backup operations; symlink-safe path-traversal check on restore
 - **Portable exe** — single-file `dist/VostokVault.exe` (~18 MB) built with PyInstaller; fonts bundled
 
+[0.5.0]: https://github.com/jonigirl/vostok-vault/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/jonigirl/vostok-vault/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/jonigirl/vostok-vault/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/jonigirl/vostok-vault/compare/v0.1.0...v0.2.0
