@@ -1,0 +1,47 @@
+{
+  "doctor": {
+    "base_tax": 200,
+    "tasks": [
+      "Nasty Draft",
+      "Steady Hands",
+      "Bookworm",
+      "Dice Master",
+      "Night Surgery",
+      "Infections",
+      "Hypovolemia",
+      "Mouth Organ",
+      "Patient Report",
+      "Substance"
+    ]
+  },
+  "generalist": {
+    "base_tax": 100,
+    "tasks": [
+      "Prime Time",
+      "Bad Habits",
+      "Backpains",
+      "Coffee Reserve",
+      "Sweaty Business",
+      "Handyman",
+      "Six Pack",
+      "Old Friend",
+      "Road Trip",
+      "Homemade"
+    ]
+  },
+  "gunsmith": {
+    "base_tax": 300,
+    "tasks": [
+      "Bloodsuckers",
+      "Warm Meal",
+      "Nordic Trade",
+      "Big Blades",
+      "Ammo Delivery",
+      "Weapon Delivery",
+      "Medic",
+      "Home Collection",
+      "Everymans Right",
+      "Hitman"
+    ]
+  }
+}
