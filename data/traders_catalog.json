@@ -1,19 +1,4 @@
 {
-  "doctor": {
-    "base_tax": 200,
-    "tasks": [
-      "Nasty Draft",
-      "Steady Hands",
-      "Bookworm",
-      "Dice Master",
-      "Night Surgery",
-      "Infections",
-      "Hypovolemia",
-      "Mouth Organ",
-      "Patient Report",
-      "Substance"
-    ]
-  },
   "generalist": {
     "base_tax": 100,
     "tasks": [
@@ -27,6 +12,21 @@
       "Old Friend",
       "Road Trip",
       "Homemade"
+    ]
+  },
+  "doctor": {
+    "base_tax": 200,
+    "tasks": [
+      "Nasty Draft",
+      "Steady Hands",
+      "Bookworm",
+      "Dice Master",
+      "Night Surgery",
+      "Infections",
+      "Hypovolemia",
+      "Mouth Organ",
+      "Patient Report",
+      "Substance"
     ]
   },
   "gunsmith": {
