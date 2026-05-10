@@ -163,14 +163,6 @@ class VostokVaultApp:
         )
         self._watch_btn.pack(side="left", padx=4, pady=9)
 
-        ctk.CTkLabel(
-            toolbar,
-            text="Auto-Backup watches for game saves and backs up automatically.",
-            font=ctk.CTkFont(family=font, size=10),
-            text_color=("gray55", "gray55"),
-            anchor="w",
-        ).pack(side="left", padx=(2, 8), pady=9)
-
         ctk.CTkButton(
             toolbar,
             text="⚙ Settings",

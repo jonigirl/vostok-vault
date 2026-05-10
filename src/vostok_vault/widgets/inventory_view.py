@@ -95,8 +95,8 @@ def _get_icon(stem: str) -> ctk.CTkImage | None:
     try:
         from PIL import Image
 
-        img = Image.open(icon_path).resize((44, 44), Image.LANCZOS)
-        ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(44, 44))
+        img = Image.open(icon_path).resize((56, 56), Image.LANCZOS)
+        ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(56, 56))
         _ITEM_ICON_CACHE[stem] = ctk_img
         return ctk_img
     except Exception:
@@ -109,14 +109,19 @@ class InventoryTable(ctk.CTkFrame):
     HEADERS = ["Slot", "Item", "Condition", "Amount"]
     COL_WIDTHS = [130, 250, 90, 65]
 
-    def __init__(self, parent, **kwargs) -> None:
+    def __init__(self, parent, show_slot: bool = True, **kwargs) -> None:
         super().__init__(parent, fg_color="transparent", **kwargs)
+        self._show_slot = show_slot
 
     def populate(self, items: list[dict]) -> None:
         for w in self.winfo_children():
             w.destroy()
 
         font = get_font()
+
+        headers = self.HEADERS[1:] if not self._show_slot else self.HEADERS
+        col_widths = self.COL_WIDTHS[1:] if not self._show_slot else self.COL_WIDTHS
+        item_col = 0 if not self._show_slot else 1
 
         if not items:
             ctk.CTkLabel(
@@ -129,7 +134,7 @@ class InventoryTable(ctk.CTkFrame):
 
         header_row = ctk.CTkFrame(self, fg_color=("gray80", "#1A1A2E"), corner_radius=4)
         header_row.pack(fill="x", padx=2, pady=(2, 0))
-        for col, (h, w) in enumerate(zip(self.HEADERS, self.COL_WIDTHS)):
+        for col, (h, w) in enumerate(zip(headers, col_widths)):
             ctk.CTkLabel(
                 header_row,
                 text=h,
@@ -155,11 +160,15 @@ class InventoryTable(ctk.CTkFrame):
                 "—" if item.get("amount", 1) in (0, 1) else str(item.get("amount", 1))
             )
 
-            for col, (val, w) in enumerate(
-                zip([slot_val, shown_name, cond, amt_val], self.COL_WIDTHS)
-            ):
-                if col == 1:
-                    cell = ctk.CTkFrame(row_frame, fg_color="transparent")
+            row_vals = (
+                [shown_name, cond, amt_val]
+                if not self._show_slot
+                else [slot_val, shown_name, cond, amt_val]
+            )
+
+            for col, (val, w) in enumerate(zip(row_vals, col_widths)):
+                if col == item_col:
+                    cell = ctk.CTkFrame(row_frame, fg_color="transparent", width=w)
                     cell.grid(row=0, column=col, padx=6, pady=3, sticky="w")
                     if rarity in _RARITY_COLOURS:
                         ctk.CTkLabel(
@@ -191,15 +200,16 @@ class InventoryTable(ctk.CTkFrame):
             for att in item.get("attachments", []):
                 att_row = ctk.CTkFrame(self, fg_color="transparent")
                 att_row.pack(fill="x", padx=2, pady=0)
-                ctk.CTkLabel(
-                    att_row,
-                    text="",
-                    width=self.COL_WIDTHS[0],
-                ).grid(row=0, column=0, padx=6)
+                if self._show_slot:
+                    ctk.CTkLabel(
+                        att_row,
+                        text="",
+                        width=col_widths[0],
+                    ).grid(row=0, column=0, padx=6)
                 ctk.CTkLabel(
                     att_row,
                     text=f"  ↳ {display_name(att)}",
                     font=ctk.CTkFont(family=font, size=13),
                     text_color=("gray65", "gray65"),
                     anchor="w",
-                ).grid(row=0, column=1, padx=6, sticky="w")
+                ).grid(row=0, column=item_col, padx=6, sticky="w")

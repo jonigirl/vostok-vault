@@ -91,6 +91,7 @@ class SaveDetailPanel(ctk.CTkFrame):
     def _build(self) -> None:
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
+        font = get_font()
 
         self._tabs = ctk.CTkTabview(self, anchor="nw")
         self._tabs.grid(row=0, column=0, sticky="nsew", padx=8, pady=8)
@@ -104,8 +105,28 @@ class SaveDetailPanel(ctk.CTkFrame):
         self._overview_scroll.grid(row=0, column=0, sticky="nsew")
         self._overview_scroll.grid_columnconfigure(1, weight=1)
 
-        self._char_scroll = ctk.CTkScrollableFrame(self._tabs.tab("Character"))
-        self._char_scroll.grid(row=0, column=0, sticky="nsew")
+        char_tab = self._tabs.tab("Character")
+        char_tab.grid_rowconfigure(0, weight=0)
+        char_tab.grid_rowconfigure(1, weight=1)
+        _collapse_btn_opts = dict(
+            width=110,
+            height=26,
+            font=ctk.CTkFont(family=font, size=12),
+            fg_color=("gray80", "gray25"),
+            text_color=("gray10", "gray90"),
+            hover_color=("gray70", "gray35"),
+        )
+        char_header = ctk.CTkFrame(char_tab, fg_color="transparent", height=32)
+        char_header.grid(row=0, column=0, sticky="ew", padx=4, pady=(4, 0))
+        self._char_collapse_btn = ctk.CTkButton(
+            char_header,
+            text="\u229f Collapse All",
+            command=self._on_char_collapse_all,
+            **_collapse_btn_opts,
+        )
+        self._char_collapse_btn.pack(side="right", padx=4)
+        self._char_scroll = ctk.CTkScrollableFrame(char_tab)
+        self._char_scroll.grid(row=1, column=0, sticky="nsew")
 
         storage_tab = self._tabs.tab("Storage")
         storage_tab.grid_rowconfigure(0, weight=0)
@@ -115,7 +136,6 @@ class SaveDetailPanel(ctk.CTkFrame):
         storage_tab.grid_columnconfigure(0, weight=1)
 
         self._storage_filter_var = ctk.StringVar()
-        font = get_font()
         self._storage_filter_entry = ctk.CTkEntry(
             storage_tab,
             placeholder_text="Filter items…",
@@ -177,15 +197,46 @@ class SaveDetailPanel(ctk.CTkFrame):
             command=self._on_storage_sort_toggle,
         )
         self._storage_sort_dir_btn.pack(side="left", padx=(6, 0))
+        self._storage_collapse_btn = ctk.CTkButton(
+            sort_frame,
+            text="\u229f Collapse All",
+            command=self._on_storage_collapse_all,
+            **_collapse_btn_opts,
+        )
+        self._storage_collapse_btn.pack(side="right", padx=(6, 0))
 
         self._storage_scroll = ctk.CTkScrollableFrame(storage_tab)
         self._storage_scroll.grid(row=3, column=0, sticky="nsew")
 
-        self._traders_scroll = ctk.CTkScrollableFrame(self._tabs.tab("Traders"))
-        self._traders_scroll.grid(row=0, column=0, sticky="nsew")
+        traders_tab = self._tabs.tab("Traders")
+        traders_tab.grid_rowconfigure(0, weight=0)
+        traders_tab.grid_rowconfigure(1, weight=1)
+        traders_header = ctk.CTkFrame(traders_tab, fg_color="transparent", height=32)
+        traders_header.grid(row=0, column=0, sticky="ew", padx=4, pady=(4, 0))
+        self._traders_collapse_btn = ctk.CTkButton(
+            traders_header,
+            text="\u229f Collapse All",
+            command=self._on_traders_collapse_all,
+            **_collapse_btn_opts,
+        )
+        self._traders_collapse_btn.pack(side="right", padx=4)
+        self._traders_scroll = ctk.CTkScrollableFrame(traders_tab)
+        self._traders_scroll.grid(row=1, column=0, sticky="nsew")
 
-        self._mods_scroll = ctk.CTkScrollableFrame(self._tabs.tab("Mods"))
-        self._mods_scroll.grid(row=0, column=0, sticky="nsew")
+        mods_tab = self._tabs.tab("Mods")
+        mods_tab.grid_rowconfigure(0, weight=0)
+        mods_tab.grid_rowconfigure(1, weight=1)
+        mods_header = ctk.CTkFrame(mods_tab, fg_color="transparent", height=32)
+        mods_header.grid(row=0, column=0, sticky="ew", padx=4, pady=(4, 0))
+        self._mods_collapse_btn = ctk.CTkButton(
+            mods_header,
+            text="\u229f Collapse All",
+            command=self._on_mods_collapse_all,
+            **_collapse_btn_opts,
+        )
+        self._mods_collapse_btn.pack(side="right", padx=4)
+        self._mods_scroll = ctk.CTkScrollableFrame(mods_tab)
+        self._mods_scroll.grid(row=1, column=0, sticky="nsew")
 
         self._tabs.configure(command=self._on_tab_changed)
 
@@ -233,6 +284,57 @@ class SaveDetailPanel(ctk.CTkFrame):
         )
         if self._current:
             self._populate_storage(self._current)
+
+    def _on_storage_sort_toggle(self) -> None:
+        self._storage_sort_reverse = not self._storage_sort_reverse
+        self._storage_sort_dir_btn.configure(
+            text="\u2193 Desc" if self._storage_sort_reverse else "\u2191 Asc"
+        )
+        if self._current:
+            self._populate_storage(self._current)
+
+    def _on_char_collapse_all(self) -> None:
+        collapsing = self._char_collapse_btn.cget("text") == "\u229f Collapse All"
+        for k in self._char_expanded:
+            self._char_expanded[k] = not collapsing
+        self._char_collapse_btn.configure(
+            text="\u229e Expand All" if collapsing else "\u229f Collapse All"
+        )
+        if self._current:
+            self._tabs_populated.discard("Character")
+            self._populate_tab("Character", self._current)
+
+    def _on_storage_collapse_all(self) -> None:
+        collapsing = self._storage_collapse_btn.cget("text") == "\u229f Collapse All"
+        for k in self._storage_expanded:
+            self._storage_expanded[k] = not collapsing
+        self._storage_collapse_btn.configure(
+            text="\u229e Expand All" if collapsing else "\u229f Collapse All"
+        )
+        if self._current:
+            self._populate_storage(self._current)
+
+    def _on_traders_collapse_all(self) -> None:
+        collapsing = self._traders_collapse_btn.cget("text") == "\u229f Collapse All"
+        for k in self._traders_expanded:
+            self._traders_expanded[k] = not collapsing
+        self._traders_collapse_btn.configure(
+            text="\u229e Expand All" if collapsing else "\u229f Collapse All"
+        )
+        if self._current:
+            self._tabs_populated.discard("Traders")
+            self._populate_tab("Traders", self._current)
+
+    def _on_mods_collapse_all(self) -> None:
+        collapsing = self._mods_collapse_btn.cget("text") == "\u229f Collapse All"
+        for k in self._mcm_expanded:
+            self._mcm_expanded[k] = not collapsing
+        self._mods_collapse_btn.configure(
+            text="\u229e Expand All" if collapsing else "\u229f Collapse All"
+        )
+        if self._current:
+            self._tabs_populated.discard("Mods")
+            self._populate_tab("Mods", self._current)
 
     def _on_tab_changed(self) -> None:
         if not self._current or not self._cached_path:
@@ -518,6 +620,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                 return
             group_key = group.lower()
             is_expanded = [self._char_expanded.get(group_key, True)]
+            self._char_expanded[group_key] = is_expanded[0]
             header_text = group.upper()
 
             def make_char_toggle(btn, frame, flag, key, text):
@@ -699,7 +802,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                     }
                     for i in items
                 ]
-                storage_table = InventoryTable(content_frame)
+                storage_table = InventoryTable(content_frame, show_slot=False)
                 storage_table.pack(fill="x", padx=8, pady=(4, 4))
                 storage_table.populate(table_items)
 
@@ -714,6 +817,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                     ).pack(fill="x", padx=16, pady=(0, 8))
 
             is_expanded = [self._storage_expanded.get(label, bool(active_filter))]
+            self._storage_expanded[label] = is_expanded[0]
             if is_expanded[0]:
                 content_frame.pack(fill="x", padx=4, pady=(0, 8))
                 header_btn.configure(text=f"\u25bc  {header_text}")
@@ -778,7 +882,8 @@ class SaveDetailPanel(ctk.CTkFrame):
             count_text = (
                 f"  ({len(items)} purchased)" if items else "  (none purchased)"
             )
-            is_expanded = [self._traders_expanded.get(trader_key, True)]
+            is_expanded = [self._traders_expanded.get(trader_key, False)]
+            self._traders_expanded[trader_key] = is_expanded[0]
             expand_char = "\u25bc" if is_expanded[0] else "\u25b6"
             section = ctk.CTkFrame(f, fg_color="transparent")
             section.pack(fill="x", padx=0, pady=0)
@@ -839,17 +944,25 @@ class SaveDetailPanel(ctk.CTkFrame):
             return
 
         active_profile = data.get("active_mod_profile", "")
-        subtitle = "Mods that were active when this backup was created."
-        if active_profile:
-            subtitle = f"Profile: {active_profile}  ·  Mods that were active when this backup was created."
+        profile_heading = (
+            f"Metro Mod Loader Profile: {active_profile}"
+            if active_profile
+            else "Metro Mod Loader Profile"
+        )
+        ctk.CTkLabel(
+            f,
+            text=profile_heading,
+            font=ctk.CTkFont(family=font, size=13, weight="bold"),
+            anchor="w",
+        ).pack(fill="x", padx=8, pady=(8, 0))
 
         ctk.CTkLabel(
             f,
-            text=subtitle,
+            text="Mods that were active when this backup was created.",
             font=ctk.CTkFont(family=font, size=12),
             text_color=("gray70", "gray70"),
             anchor="w",
-        ).pack(fill="x", padx=8, pady=(8, 4))
+        ).pack(fill="x", padx=8, pady=(2, 4))
 
         headers = ["", "Name", "Version"]
         col_widths = [24, 260, 110]
@@ -918,7 +1031,8 @@ class SaveDetailPanel(ctk.CTkFrame):
 
         for mod_folder, settings in mcm_data.items():
             display_mod_name = _MOD_DISPLAY_NAMES.get(mod_folder, mod_folder)
-            is_expanded = [self._mcm_expanded.get(mod_folder, True)]
+            is_expanded = [self._mcm_expanded.get(mod_folder, False)]
+            self._mcm_expanded[mod_folder] = is_expanded[0]
             expand_char = "\u25bc" if is_expanded[0] else "\u25b6"
 
             section = ctk.CTkFrame(f, fg_color="transparent")
