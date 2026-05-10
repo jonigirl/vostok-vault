@@ -137,14 +137,35 @@ class BackupListPanel(ctk.CTkFrame):
 
     def _build(self) -> None:
         font = get_font()
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=0)
+        self.grid_rowconfigure(0, weight=0)
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=0)
         self.grid_columnconfigure(0, weight=1)
+
+        filter_row = ctk.CTkFrame(self, fg_color="transparent")
+        filter_row.grid(row=0, column=0, sticky="ew", padx=6, pady=(6, 2))
+        filter_row.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(
+            filter_row,
+            text="Filter:",
+            font=ctk.CTkFont(family=font, size=13),
+            text_color=("gray60", "gray60"),
+        ).grid(row=0, column=0, padx=(0, 4))
+        self._filter_var = ctk.StringVar()
+        ctk.CTkEntry(
+            filter_row,
+            textvariable=self._filter_var,
+            placeholder_text="tag or date…",
+            font=ctk.CTkFont(family=font, size=13),
+            height=28,
+            corner_radius=4,
+        ).grid(row=0, column=1, sticky="ew")
+        self._filter_var.trace_add("write", self._apply_filter)
 
         self._scroll = ctk.CTkScrollableFrame(
             self, label_text="Backups", corner_radius=6
         )
-        self._scroll.grid(row=0, column=0, sticky="nsew", padx=6, pady=(6, 4))
+        self._scroll.grid(row=1, column=0, sticky="nsew", padx=6, pady=(2, 4))
 
         self._empty_label = ctk.CTkLabel(
             self._scroll,
@@ -162,7 +183,7 @@ class BackupListPanel(ctk.CTkFrame):
             corner_radius=4,
             font=ctk.CTkFont(family=font, size=15, weight="bold"),
             command=self._on_backup_now,
-        ).grid(row=1, column=0, sticky="ew", padx=6, pady=(0, 6))
+        ).grid(row=2, column=0, sticky="ew", padx=6, pady=(0, 6))
 
     def set_backups(self, backups: list[dict]) -> None:
         for card in self._cards:
@@ -181,8 +202,22 @@ class BackupListPanel(ctk.CTkFrame):
                 on_click=self._card_clicked,
                 fg_color=("gray88", "#2A2A2A"),
             )
-            card.pack(fill="x", padx=4, pady=4)
             self._cards.append(card)
+        self._apply_filter()
+
+    def _apply_filter(self, *_args) -> None:
+        text = self._filter_var.get().lower().strip()
+        for card in self._cards:
+            card.pack_forget()
+        for card in self._cards:
+            d = card._data
+            visible = (
+                not text
+                or text in (d.get("tag") or "").lower()
+                or text in _format_card_date(d.get("created") or "").lower()
+            )
+            if visible:
+                card.pack(fill="x", padx=4, pady=4)
 
     def _card_clicked(self, data: dict) -> None:
         for card in self._cards:

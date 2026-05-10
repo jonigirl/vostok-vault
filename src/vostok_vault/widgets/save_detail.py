@@ -1,12 +1,21 @@
+import logging
 from pathlib import Path
 
 import customtkinter as ctk
 
 from ..constants import DIFFICULTY_NAMES, SEASON_NAMES
+
+log = logging.getLogger(__name__)
 from ..fonts import get_font
 from ..mcm_parser import parse_mcm_configs
 from ..tres_parser import parse_character, parse_storage, parse_validator, parse_world
-from .inventory_view import InventoryTable, display_name, item_weight, rarity_counts
+from .inventory_view import (
+    _ITEM_RARITY,
+    InventoryTable,
+    display_name,
+    item_weight,
+    rarity_counts,
+)
 
 _SLOT_GROUP: dict[str, str] = {
     "Head": "Armour",
@@ -126,7 +135,7 @@ class SaveDetailPanel(ctk.CTkFrame):
         ).pack(side="left", padx=(0, 6))
         self._storage_sort_seg = ctk.CTkSegmentedButton(
             sort_frame,
-            values=["Name", "Weight", "Condition", "Amount"],
+            values=["Name", "Weight", "Condition", "Amount", "Rarity"],
             command=self._on_storage_sort_key_change,
             font=ctk.CTkFont(family=font, size=12),
             height=28,
@@ -196,10 +205,23 @@ class SaveDetailPanel(ctk.CTkFrame):
         if not data:
             self._show_placeholder()
             return
+        t0 = time.perf_counter()
         self._populate_overview(data)
+        t1 = time.perf_counter()
         self._populate_character(data)
+        t2 = time.perf_counter()
         self._populate_storage(data)
+        t3 = time.perf_counter()
         self._populate_mods(data)
+        t4 = time.perf_counter()
+        log.debug(
+            "show_backup timing — overview: %.3fs  character: %.3fs  storage: %.3fs  mods: %.3fs  total: %.3fs",
+            t1 - t0,
+            t2 - t1,
+            t3 - t2,
+            t4 - t3,
+            t4 - t0,
+        )
 
     def _populate_overview(self, data: dict) -> None:
         self._clear(self._overview_scroll)
@@ -262,12 +284,15 @@ class SaveDetailPanel(ctk.CTkFrame):
             row += 1
 
         backup_path = Path(data.get("_path", ""))
+        _tp0 = time.perf_counter()
         validator = parse_validator(backup_path / "Validator.tres")
+        _tp1 = time.perf_counter()
         if validator["player_id"]:
             info_row("Player ID", validator["player_id"], row)
             row += 1
 
         world = parse_world(backup_path / "World.tres")
+        _tp2 = time.perf_counter()
         if world["shelters"] is not None:
             info_row("Shelters", str(world["shelters"]), row)
             row += 1
@@ -276,9 +301,35 @@ class SaveDetailPanel(ctk.CTkFrame):
             row += 1
 
         char_items_parsed = parse_character(backup_path / "Character.tres")
+        _tp3 = time.perf_counter()
         storage_items_parsed = parse_storage(
             backup_path / "Cabin.tres"
         ) + parse_storage(backup_path / "Tent.tres")
+        _tp4 = time.perf_counter()
+        log.debug(
+            "_populate_overview parse timing — validator: %.3fs  world: %.3fs  character: %.3fs  storage: %.3fs",
+            _tp1 - _tp0,
+            _tp2 - _tp1,
+            _tp3 - _tp2,
+            _tp4 - _tp3,
+        )
+
+        char_weight = sum(
+            item_weight(i["item_name"]) for i in char_items_parsed if i.get("item_name")
+        )
+        storage_weight = sum(
+            item_weight(i["item_name"])
+            for i in storage_items_parsed
+            if i.get("item_name")
+        )
+        if char_weight > 0 or storage_weight > 0:
+            info_row(
+                "Carried / Stored",
+                f"{char_weight:.1f} kg / {storage_weight:.1f} kg",
+                row,
+            )
+            row += 1
+
         all_stems = [
             i["item_name"].replace("_", " ")
             for i in char_items_parsed + storage_items_parsed
@@ -483,6 +534,11 @@ class SaveDetailPanel(ctk.CTkFrame):
                 return (float(cond) if cond is not None else 0.0, name)
             if self._storage_sort_key == "Amount":
                 return (float(i.get("amount", 1) or 1), name)
+            if self._storage_sort_key == "Rarity":
+                _rarity_order = {"legendary": 0, "rare": 1, "common": 2}
+                rarity = _ITEM_RARITY.get(i["item_name"])
+                priority = _rarity_order.get(rarity, 3) if rarity is not None else 3
+                return (priority, name)
             return (name, "")
 
         for filename in ("Cabin.tres", "Tent.tres"):

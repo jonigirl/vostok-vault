@@ -3,6 +3,7 @@ import webbrowser
 
 import customtkinter as ctk
 
+from ..backup import _sanitise_tag
 from ..fonts import FONT_ATKINSON, FONT_OPENDYSLEXIC, get_font
 from ..logging_setup import setup_logging
 from ..paths import LOG_FILE
@@ -82,16 +83,31 @@ class _TagDialog(ctk.CTkToplevel):
             font=ctk.CTkFont(family=font, size=13),
         ).pack(padx=20, pady=(16, 4))
 
+        self._entry_var = ctk.StringVar(value=suggestion)
         self._entry = ctk.CTkEntry(
-            self, width=280, font=ctk.CTkFont(family=font, size=13)
+            self,
+            width=280,
+            font=ctk.CTkFont(family=font, size=13),
+            textvariable=self._entry_var,
         )
-        self._entry.pack(padx=20, pady=(0, 12))
-        self._entry.insert(0, suggestion)
+        self._entry.pack(padx=20, pady=(0, 4))
         self._entry.select_range(0, "end")
         self._entry.configure(
             validate="key",
             validatecommand=(self.register(lambda s: len(s) <= 60), "%P"),
         )
+
+        self._preview_label = ctk.CTkLabel(
+            self,
+            text="",
+            font=ctk.CTkFont(family=font, size=11),
+            text_color=("gray55", "gray55"),
+            anchor="w",
+            width=280,
+        )
+        self._preview_label.pack(padx=20, pady=(0, 8))
+        self._entry_var.trace_add("write", self._update_preview)
+        self._update_preview()
 
         btn_frame = ctk.CTkFrame(self, fg_color="transparent")
         btn_frame.pack(padx=20, pady=(0, 16))
@@ -116,6 +132,14 @@ class _TagDialog(ctk.CTkToplevel):
         self._entry.bind("<Return>", lambda e: self._ok())
         self._entry.bind("<Escape>", lambda e: self._cancel())
         self.after(50, self._entry.focus_set)
+
+    def _update_preview(self, *_args) -> None:
+        raw = self._entry_var.get()
+        sanitised = _sanitise_tag(raw)
+        if sanitised != raw:
+            self._preview_label.configure(text=f"Will be saved as: {sanitised}")
+        else:
+            self._preview_label.configure(text="")
 
     def _ok(self) -> None:
         self._result = self._entry.get()

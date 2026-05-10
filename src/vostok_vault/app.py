@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import sys
 import threading
 from datetime import datetime
@@ -77,7 +78,9 @@ class VostokVaultApp:
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self._selected: dict | None = None
-        self._watcher = SaveWatcher(self._on_auto_backup)
+        self._watcher = SaveWatcher(
+            self._on_auto_backup, on_dir_lost=self._on_save_dir_lost
+        )
 
         self._build_ui()
         self._load_backups()
@@ -121,6 +124,15 @@ class VostokVaultApp:
         ctk.CTkButton(
             toolbar, text="Rename Tag", width=100, command=self._on_rename, **btn_opts
         ).pack(side="left", padx=4, pady=9)
+        self._open_folder_btn = ctk.CTkButton(
+            toolbar,
+            text="Open Folder",
+            width=100,
+            command=self._on_open_folder,
+            state="disabled",
+            **btn_opts,
+        )
+        self._open_folder_btn.pack(side="left", padx=4, pady=9)
 
         ctk.CTkFrame(toolbar, width=1, fg_color=("gray70", "gray40")).pack(
             side="left", fill="y", padx=(8, 8), pady=10
@@ -235,6 +247,12 @@ class VostokVaultApp:
     def _on_select(self, data: dict | None) -> None:
         self._selected = data
         self._right.show_backup(data)
+        self._open_folder_btn.configure(state="normal" if data else "disabled")
+
+    def _on_open_folder(self) -> None:
+        if not self._selected:
+            return
+        os.startfile(Path(self._selected["_path"]).parent)
 
     def _on_backup_now(self) -> None:
         world = tres_parser.parse_world(SAVE_DIR / "World.tres")
@@ -353,6 +371,15 @@ class VostokVaultApp:
                 self._set_status("Watcher active — monitoring save files")
             else:
                 self._set_status("Could not start watcher — save folder not found")
+
+    def _on_save_dir_lost(self) -> None:
+        self.root.after(
+            0,
+            lambda: (
+                self._watch_btn.configure(text="Auto-Backup: Off"),
+                self._set_status("Auto-Backup stopped — save folder not found"),
+            ),
+        )
 
     def _on_auto_backup(self) -> None:
         try:

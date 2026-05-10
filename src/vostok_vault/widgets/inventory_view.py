@@ -1,8 +1,11 @@
 import json
+import logging
 
 import customtkinter as ctk
 
 from ..fonts import get_font
+
+log = logging.getLogger(__name__)
 from ..paths import ICONS_DIR, ITEMS_JSON
 
 _RARITY_COLOURS: dict[str, tuple[str, str]] = {
@@ -46,7 +49,11 @@ def _rarity_color(name: str) -> tuple[str, str] | None:
 def display_name(stem: str) -> str:
     """Return the human-readable display name for a stem-key, falling back to the stem."""
     _ensure_rarity_loaded()
-    return _ITEM_DISPLAY_NAME.get(stem, stem)
+    name = _ITEM_DISPLAY_NAME.get(stem)
+    if name is None:
+        log.debug("Unknown item stem: %s", stem)
+        return stem
+    return name
 
 
 def item_weight(stem: str) -> float:
@@ -80,8 +87,8 @@ def _get_icon(stem: str) -> ctk.CTkImage | None:
     try:
         from PIL import Image
 
-        img = Image.open(icon_path).resize((28, 28), Image.LANCZOS)
-        ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(28, 28))
+        img = Image.open(icon_path).resize((44, 44), Image.LANCZOS)
+        ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(44, 44))
         _ITEM_ICON_CACHE[stem] = ctk_img
         return ctk_img
     except Exception:
