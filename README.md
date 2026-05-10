@@ -14,6 +14,7 @@ Road to Vostok only saves progress when you enter a shelter. If you die outside,
 - **Auto-backup** — watches your save folder and creates a backup automatically when the game saves
 - **Difficulty tracking** — shows Ironman (permadeath) warning on affected backups
 - **Tag and delete** — rename or remove old backups
+- **Update check** — optional startup check for new releases. Enable it once in Settings; after that, Vostok Vault quietly checks GitHub each time it opens. If a newer version is found, an "⬆ Update available" button appears in the toolbar — click it to read what changed, then click "Download update" to open the releases page in your browser. Off by default. Nothing is sent to GitHub; only the latest release version is fetched.
 
 ## Requirements
 

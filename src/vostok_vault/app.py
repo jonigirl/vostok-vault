@@ -1,6 +1,7 @@
 import json
 import logging
 import sys
+import threading
 from datetime import datetime
 from pathlib import Path
 from tkinter import messagebox
@@ -8,7 +9,7 @@ from tkinter import messagebox
 import customtkinter as ctk
 
 from . import backup as bk
-from . import tres_parser
+from . import tres_parser, updater
 from .constants import (
     APP_TITLE,
     LEFT_PANEL_WIDTH,
@@ -22,7 +23,7 @@ from .paths import SAVE_DIR
 from .settings import load_settings, save_settings
 from .watcher import SaveWatcher
 from .widgets.backup_list import BackupListPanel
-from .widgets.dialogs import _SettingsDialog, _TagDialog
+from .widgets.dialogs import _SettingsDialog, _TagDialog, _UpdateDialog
 from .widgets.save_detail import SaveDetailPanel
 
 log = logging.getLogger(__name__)
@@ -81,6 +82,7 @@ class VostokVaultApp:
         self._build_ui()
         self._load_backups()
         self.root.after(200, self._check_startup)
+        self.root.after(2000, self._schedule_update_check)
 
     def _build_ui(self) -> None:
         self.root.grid_columnconfigure(0, weight=0, minsize=LEFT_PANEL_WIDTH)
@@ -159,6 +161,18 @@ class VostokVaultApp:
             **btn_opts,
         ).pack(side="right", padx=(4, 10), pady=9)
 
+        self._update_btn = ctk.CTkButton(
+            toolbar,
+            text="⬆ Update available",
+            width=140,
+            fg_color=("#1A5276", "#1A5276"),
+            hover_color=("#154360", "#154360"),
+            text_color=("white", "white"),
+            command=self._on_show_update,
+            **btn_opts,
+        )
+        # _update_btn is intentionally not packed here — shown only when an update is found
+
         self._status = ctk.CTkLabel(
             toolbar,
             text="Ready",
@@ -167,6 +181,26 @@ class VostokVaultApp:
             text_color=("gray60", "gray60"),
         )
         self._status.pack(side="left", padx=12, fill="x", expand=True)
+
+    def _schedule_update_check(self) -> None:
+        settings = load_settings()
+        if not settings.get("check_for_updates", False):
+            return
+
+        def _check() -> None:
+            info = updater.check_for_update()
+            if info:
+                self.root.after(0, lambda: self._on_update_available(info))
+
+        threading.Thread(target=_check, daemon=True).start()
+
+    def _on_update_available(self, info: dict) -> None:
+        self._update_info = info
+        self._update_btn.pack(side="right", padx=(4, 4), pady=9)
+
+    def _on_show_update(self) -> None:
+        if hasattr(self, "_update_info"):
+            _UpdateDialog(self.root, self._update_info)
 
     def _check_startup(self) -> None:
         settings = load_settings()
@@ -248,6 +282,7 @@ class VostokVaultApp:
             return
         ok = bk.restore_backup(Path(self._selected["_path"]))
         if ok:
+            bk.prune_pre_restore_backups(3)
             self._set_status(f"Restored: {self._selected['tag']}")
             self._load_backups()
         else:

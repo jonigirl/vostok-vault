@@ -66,7 +66,7 @@ def _create_backup_locked(tag: str = "manual") -> dict | None:
             shutil.copytree(src, dest / dname, dirs_exist_ok=True)
 
     world = parse_world(SAVE_DIR / "World.tres")
-    mods_raw = parse_mod_config(SAVE_DIR / "mod_config.cfg")
+    mods_raw, active_mod_profile = parse_mod_config(SAVE_DIR / "mod_config.cfg")
     name_map = get_mod_names(SAVE_DIR)
     mods = []
     for m in mods_raw:
@@ -95,6 +95,7 @@ def _create_backup_locked(tag: str = "manual") -> dict | None:
         "difficulty": world["difficulty"],
         "char_items": char_items,
         "storage_items": storage_items,
+        "active_mod_profile": active_mod_profile,
         "mods": mods,
     }
     tmp = dest / "manifest.json.tmp"
@@ -192,3 +193,19 @@ def prune_auto_backups(max_count: int = 5) -> None:
         )
         while len(auto_backups) > max_count:
             shutil.rmtree(auto_backups.pop(0), ignore_errors=True)
+
+
+def prune_pre_restore_backups(max_count: int = 3) -> None:
+    with _lock:
+        if not BACKUP_DIR.exists():
+            return
+        pre_restore_backups = sorted(
+            [
+                p
+                for p in BACKUP_DIR.iterdir()
+                if p.is_dir() and p.name.endswith("_pre_restore")
+            ],
+            key=lambda p: p.name,
+        )
+        while len(pre_restore_backups) > max_count:
+            shutil.rmtree(pre_restore_backups.pop(0), ignore_errors=True)

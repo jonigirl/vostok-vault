@@ -4,6 +4,7 @@ import customtkinter as ctk
 
 from ..constants import DIFFICULTY_NAMES, SEASON_NAMES
 from ..fonts import get_font
+from ..mcm_parser import parse_mcm_configs
 from ..tres_parser import parse_character, parse_storage, parse_validator, parse_world
 from .inventory_view import InventoryTable, display_name, item_weight
 
@@ -70,6 +71,7 @@ class SaveDetailPanel(ctk.CTkFrame):
         self._current: dict | None = None
         self._storage_expanded: dict[str, bool] = {}
         self._char_expanded: dict[str, bool] = {}
+        self._mcm_expanded: dict[str, bool] = {}
         self._storage_sort_key: str = "Name"
         self._storage_sort_reverse: bool = False
         self._build()
@@ -273,9 +275,29 @@ class SaveDetailPanel(ctk.CTkFrame):
             info_row("Weather in", _format_weather_time(world["weather_time"]), row)
             row += 1
 
+        char_items_parsed = parse_character(backup_path / "Character.tres")
+        storage_items_parsed = parse_storage(backup_path / "Storage.tres")
+        all_stems = [
+            i["item_name"].replace("_", " ")
+            for i in char_items_parsed + storage_items_parsed
+            if i.get("item_name")
+        ]
+        if all_stems:
+            counts = rarity_counts(all_stems)
+            section_heading("INVENTORY RARITY", row)
+            row += 1
+            parts = []
+            if counts["legendary"]:
+                parts.append(f"{counts['legendary']} legendary")
+            if counts["rare"]:
+                parts.append(f"{counts['rare']} rare")
+            if counts["common"]:
+                parts.append(f"{counts['common']} common")
+            if parts:
+                info_row("Items", "  ·  ".join(parts), row)
+                row += 1
+
         ctk.CTkLabel(
-            f,
-            text="Mods at Backup Time",
             font=ctk.CTkFont(family=font, size=14, weight="bold"),
             anchor="w",
         ).grid(row=row, column=0, columnspan=2, sticky="w", padx=12, pady=(16, 4))
@@ -571,9 +593,14 @@ class SaveDetailPanel(ctk.CTkFrame):
             ).pack(pady=20)
             return
 
+        active_profile = data.get("active_mod_profile", "")
+        subtitle = "Mods that were active when this backup was created."
+        if active_profile:
+            subtitle = f"Profile: {active_profile}  ·  Mods that were active when this backup was created."
+
         ctk.CTkLabel(
             f,
-            text="Mods that were active when this backup was created.",
+            text=subtitle,
             font=ctk.CTkFont(family=font, size=12),
             text_color=("gray70", "gray70"),
             anchor="w",
@@ -613,3 +640,102 @@ class SaveDetailPanel(ctk.CTkFrame):
                     anchor="w",
                     **kwargs,
                 ).grid(row=0, column=col, padx=6, pady=3, sticky="w")
+
+        backup_path = data.get("_path", "")
+        if not backup_path:
+            return
+        mcm_data = parse_mcm_configs(Path(backup_path) / "MCM")
+        if not mcm_data:
+            return
+
+        ctk.CTkLabel(
+            f,
+            text="MCM Mod Settings",
+            font=ctk.CTkFont(family=font, size=14, weight="bold"),
+            anchor="w",
+        ).pack(fill="x", padx=8, pady=(16, 4))
+
+        mcm_col_widths = [220, 140]
+
+        def make_mcm_toggle(btn, frame, flag, key, text):
+            def _toggle():
+                if flag[0]:
+                    frame.pack_forget()
+                    btn.configure(text=f"\u25b6  {text}")
+                    flag[0] = False
+                else:
+                    frame.pack(fill="x", padx=4, pady=(0, 4))
+                    btn.configure(text=f"\u25bc  {text}")
+                    flag[0] = True
+                self._mcm_expanded[key] = flag[0]
+
+            return _toggle
+
+        for mod_folder, settings in mcm_data.items():
+            display_mod_name = _MOD_DISPLAY_NAMES.get(mod_folder, mod_folder)
+            is_expanded = [self._mcm_expanded.get(mod_folder, True)]
+            expand_char = "\u25bc" if is_expanded[0] else "\u25b6"
+
+            section = ctk.CTkFrame(f, fg_color="transparent")
+            section.pack(fill="x", padx=0, pady=0)
+
+            header_btn = ctk.CTkButton(
+                section,
+                text=f"{expand_char}  {display_mod_name}",
+                fg_color=("gray85", "#2A2A40"),
+                hover_color=("gray78", "#32324E"),
+                text_color=("gray10", "gray90"),
+                anchor="w",
+                corner_radius=4,
+                font=ctk.CTkFont(family=font, size=11),
+            )
+            header_btn.pack(fill="x", padx=4, pady=(8, 0))
+
+            content_frame = ctk.CTkFrame(section, fg_color="transparent")
+
+            mcm_header = ctk.CTkFrame(
+                content_frame, fg_color=("gray80", "#1A1A2E"), corner_radius=4
+            )
+            mcm_header.pack(fill="x", padx=4, pady=(2, 0))
+            for col, (h, w) in enumerate(zip(["Setting", "Value"], mcm_col_widths)):
+                ctk.CTkLabel(
+                    mcm_header,
+                    text=h,
+                    font=ctk.CTkFont(family=font, size=13, weight="bold"),
+                    width=w,
+                    anchor="w",
+                ).grid(row=0, column=col, padx=6, pady=4, sticky="w")
+
+            current_category = ""
+            for setting in settings:
+                cat = setting.get("category", "")
+                if cat and cat != current_category:
+                    current_category = cat
+                    ctk.CTkLabel(
+                        content_frame,
+                        text=cat,
+                        font=ctk.CTkFont(family=font, size=11),
+                        text_color=("gray65", "gray65"),
+                        anchor="w",
+                    ).pack(fill="x", padx=12, pady=(4, 0))
+
+                row_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
+                row_frame.pack(fill="x", padx=4, pady=1)
+                for col, (val, w) in enumerate(
+                    zip([setting["name"], setting["display_value"]], mcm_col_widths)
+                ):
+                    ctk.CTkLabel(
+                        row_frame,
+                        text=val,
+                        font=ctk.CTkFont(family=font, size=13),
+                        width=w,
+                        anchor="w",
+                    ).grid(row=0, column=col, padx=6, pady=2, sticky="w")
+
+            if is_expanded[0]:
+                content_frame.pack(fill="x", padx=4, pady=(0, 4))
+            header_btn.configure(
+                command=make_mcm_toggle(
+                    header_btn, content_frame, is_expanded, mod_folder, display_mod_name
+                )
+            )

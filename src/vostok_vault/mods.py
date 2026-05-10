@@ -4,14 +4,19 @@ import zipfile
 from pathlib import Path
 
 
-def parse_mod_config(cfg_path: Path) -> list[dict]:
+def parse_mod_config(cfg_path: Path) -> tuple[list[dict], str]:
     if not cfg_path.exists():
-        return []
+        return [], ""
     parser = configparser.RawConfigParser()
     try:
         parser.read(cfg_path, encoding="utf-8")
     except Exception:
-        return []
+        return [], ""
+    active_profile = ""
+    if parser.has_section("settings"):
+        active_profile = parser.get("settings", "active_profile", fallback="").strip(
+            '"'
+        )
     results = []
     for section in parser.sections():
         if "enabled" not in section.lower():
@@ -28,7 +33,7 @@ def parse_mod_config(cfg_path: Path) -> list[dict]:
                     "enabled": enabled,
                 }
             )
-    return results
+    return results, active_profile
 
 
 def _read_vmz_mod_info(vmz_path: Path) -> dict:

@@ -15,26 +15,30 @@ feel@0.0.2=false
 
 
 def test_parse_mod_config_missing_file(tmp_path: Path) -> None:
-    assert parse_mod_config(tmp_path / "missing.cfg") == []
+    mods, profile = parse_mod_config(tmp_path / "missing.cfg")
+    assert mods == []
+    assert profile == ""
 
 
 def test_parse_mod_config_returns_three_mods(tmp_path: Path) -> None:
     p = tmp_path / "mod_config.cfg"
     p.write_text(MOD_CONFIG_CFG, encoding="utf-8")
-    assert len(parse_mod_config(p)) == 3
+    mods, _ = parse_mod_config(p)
+    assert len(mods) == 3
 
 
 def test_parse_mod_config_ids(tmp_path: Path) -> None:
     p = tmp_path / "mod_config.cfg"
     p.write_text(MOD_CONFIG_CFG, encoding="utf-8")
-    ids = {m["id"] for m in parse_mod_config(p)}
-    assert ids == {"doinkoink-mcm", "elegant-hud", "feel"}
+    mods, _ = parse_mod_config(p)
+    assert {m["id"] for m in mods} == {"doinkoink-mcm", "elegant-hud", "feel"}
 
 
 def test_parse_mod_config_versions(tmp_path: Path) -> None:
     p = tmp_path / "mod_config.cfg"
     p.write_text(MOD_CONFIG_CFG, encoding="utf-8")
-    versions = {m["id"]: m["version"] for m in parse_mod_config(p)}
+    mods, _ = parse_mod_config(p)
+    versions = {m["id"]: m["version"] for m in mods}
     assert versions["doinkoink-mcm"] == "2.7.0"
     assert versions["elegant-hud"] == "1.0.2"
     assert versions["feel"] == "0.0.2"
@@ -43,7 +47,8 @@ def test_parse_mod_config_versions(tmp_path: Path) -> None:
 def test_parse_mod_config_enabled_flags(tmp_path: Path) -> None:
     p = tmp_path / "mod_config.cfg"
     p.write_text(MOD_CONFIG_CFG, encoding="utf-8")
-    enabled = {m["id"]: m["enabled"] for m in parse_mod_config(p)}
+    mods, _ = parse_mod_config(p)
+    enabled = {m["id"]: m["enabled"] for m in mods}
     assert enabled["doinkoink-mcm"] is True
     assert enabled["elegant-hud"] is True
     assert enabled["feel"] is False
@@ -52,16 +57,25 @@ def test_parse_mod_config_enabled_flags(tmp_path: Path) -> None:
 def test_parse_mod_config_no_enabled_section(tmp_path: Path) -> None:
     p = tmp_path / "mod_config.cfg"
     p.write_text("[settings]\nfoo=bar\n", encoding="utf-8")
-    assert parse_mod_config(p) == []
+    mods, profile = parse_mod_config(p)
+    assert mods == []
+    assert profile == ""
+
+
+def test_parse_mod_config_active_profile(tmp_path: Path) -> None:
+    p = tmp_path / "mod_config.cfg"
+    p.write_text(MOD_CONFIG_CFG, encoding="utf-8")
+    _, profile = parse_mod_config(p)
+    assert profile == "Default"
 
 
 def test_parse_mod_config_skips_keys_without_at(tmp_path: Path) -> None:
     content = "[profile.Default.enabled]\nno-at-sign=true\nmod@1.0.0=true\n"
     p = tmp_path / "mod_config.cfg"
     p.write_text(content, encoding="utf-8")
-    result = parse_mod_config(p)
-    assert len(result) == 1
-    assert result[0]["id"] == "mod"
+    mods, _ = parse_mod_config(p)
+    assert len(mods) == 1
+    assert mods[0]["id"] == "mod"
 
 
 def test_get_mod_names_no_pass_state(tmp_path: Path) -> None:

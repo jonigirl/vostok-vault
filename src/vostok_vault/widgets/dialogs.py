@@ -1,4 +1,5 @@
 import os
+import webbrowser
 
 import customtkinter as ctk
 
@@ -6,6 +7,65 @@ from ..fonts import FONT_ATKINSON, FONT_OPENDYSLEXIC, get_font
 from ..logging_setup import setup_logging
 from ..paths import LOG_FILE
 from ..settings import load_settings, save_settings
+
+
+class _UpdateDialog(ctk.CTkToplevel):
+    def __init__(self, parent, update_info: dict) -> None:
+        super().__init__(parent)
+        self.title(f"Update available — {update_info['version']}")
+        self.resizable(False, False)
+        font = get_font()
+
+        ctk.CTkLabel(
+            self,
+            text=f"Version {update_info['version']} is available",
+            font=ctk.CTkFont(family=font, size=15, weight="bold"),
+            anchor="w",
+        ).pack(padx=20, pady=(16, 4), fill="x")
+
+        notes = update_info.get("notes", "").strip()
+        if notes:
+            ctk.CTkLabel(
+                self,
+                text="What's changed:",
+                font=ctk.CTkFont(family=font, size=12),
+                text_color=("gray65", "gray65"),
+                anchor="w",
+            ).pack(padx=20, pady=(0, 4), fill="x")
+
+            notes_box = ctk.CTkTextbox(
+                self,
+                width=400,
+                height=200,
+                font=ctk.CTkFont(family=font, size=13),
+                wrap="word",
+            )
+            notes_box.pack(padx=20, pady=(0, 12), fill="x")
+            notes_box.insert("1.0", notes)
+            notes_box.configure(state="disabled")
+
+        btn_row = ctk.CTkFrame(self, fg_color="transparent")
+        btn_row.pack(padx=20, pady=(0, 16), fill="x")
+
+        ctk.CTkButton(
+            btn_row,
+            text="Download update",
+            font=ctk.CTkFont(family=font, size=13),
+            command=lambda: webbrowser.open(update_info["url"]),
+        ).pack(side="left")
+
+        ctk.CTkButton(
+            btn_row,
+            text="Dismiss",
+            font=ctk.CTkFont(family=font, size=13),
+            fg_color=("gray75", "gray30"),
+            hover_color=("gray65", "gray25"),
+            command=self.destroy,
+        ).pack(side="right")
+
+        self.grab_set()
+        self.transient(parent)
+        self.protocol("WM_DELETE_WINDOW", self.destroy)
 
 
 class _TagDialog(ctk.CTkToplevel):
@@ -146,6 +206,62 @@ class _SettingsDialog(ctk.CTkToplevel):
             anchor="w",
         ).pack(padx=20, pady=(0, 8), fill="x")
 
+        ctk.CTkLabel(
+            self,
+            text="Updates",
+            font=ctk.CTkFont(family=font, size=13, weight="bold"),
+        ).pack(padx=20, pady=(4, 4))
+
+        self._update_var = ctk.BooleanVar(
+            value=self._settings.get("check_for_updates", False)
+        )
+        ctk.CTkSwitch(
+            self,
+            text="Check for updates on startup",
+            font=ctk.CTkFont(family=font, size=13),
+            variable=self._update_var,
+            command=self._on_update_toggle,
+        ).pack(padx=20, pady=(0, 4), anchor="w")
+
+        ctk.CTkLabel(
+            self,
+            text=(
+                "When enabled, checks GitHub once each time the app starts.\n"
+                'If a newer version is found, an "\u2b06 Update available" button\n'
+                "appears in the toolbar \u2014 click it to see what changed and download.\n"
+                "Nothing is sent to GitHub; only the latest version number is fetched."
+            ),
+            font=ctk.CTkFont(family=font, size=11),
+            text_color=("gray65", "gray65"),
+            wraplength=320,
+            justify="left",
+        ).pack(padx=20, pady=(0, 12), anchor="w")
+
+        ctk.CTkButton(
+            debug_row,
+            text="Open log folder",
+            font=ctk.CTkFont(family=font, size=12),
+            width=120,
+            command=lambda: os.startfile(str(LOG_FILE.parent)),
+        ).pack(side="right")
+
+        ctk.CTkLabel(
+            self,
+            text=f"Log: {LOG_FILE}",
+            font=ctk.CTkFont(family=font, size=10),
+            text_color=("gray55", "gray55"),
+            wraplength=320,
+            justify="left",
+        ).pack(padx=20, pady=(0, 8), anchor="w")
+
+        ctk.CTkLabel(
+            self,
+            text="Log path contains your Windows username.",
+            font=ctk.CTkFont(family=font, size=11),
+            text_color=("gray65", "gray65"),
+            anchor="w",
+        ).pack(padx=20, pady=(0, 8), fill="x")
+
         self._msg_label = ctk.CTkLabel(
             self,
             text="",
@@ -169,6 +285,10 @@ class _SettingsDialog(ctk.CTkToplevel):
         enabled = self._debug_var.get()
         setup_logging(debug=enabled)
         self._settings["debug_logging"] = enabled
+        save_settings(self._settings)
+
+    def _on_update_toggle(self) -> None:
+        self._settings["check_for_updates"] = self._update_var.get()
         save_settings(self._settings)
 
     def _save(self) -> None:

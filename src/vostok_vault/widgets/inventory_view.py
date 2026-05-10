@@ -54,6 +54,19 @@ def item_weight(stem: str) -> float:
     return _ITEM_WEIGHT.get(stem, 0.0)
 
 
+def rarity_counts(stems: list[str]) -> dict[str, int]:
+    """Return counts of legendary/rare/common for a list of item stem keys."""
+    _ensure_rarity_loaded()
+    counts: dict[str, int] = {"legendary": 0, "rare": 0, "common": 0}
+    for stem in stems:
+        r = _ITEM_RARITY.get(stem, "common")
+        if r in counts:
+            counts[r] += 1
+        else:
+            counts["common"] += 1
+    return counts
+
+
 def _get_icon(stem: str) -> ctk.CTkImage | None:
     if stem in _ITEM_ICON_CACHE:
         return _ITEM_ICON_CACHE[stem]

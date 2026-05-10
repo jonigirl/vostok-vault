@@ -3,6 +3,7 @@ from typing import Callable
 
 import customtkinter as ctk
 
+from ..constants import SEASON_NAMES
 from ..fonts import get_font
 
 
@@ -40,15 +41,41 @@ class BackupCard(ctk.CTkFrame):
         created = self._data.get("created", "")
         day = self._data.get("game_day", "?")
         time_str = self._data.get("game_time", "??:??")
+        season_num = self._data.get("season")
+        season_name = SEASON_NAMES.get(season_num, "") if season_num is not None else ""
         mod_count = len(self._data.get("mods", []))
         mod_label = f"{mod_count} mod{'s' if mod_count != 1 else ''}"
 
+        is_auto = tag == "auto"
+        is_pre_restore = tag == "pre_restore"
+
+        display_tag = tag
+        type_label: str | None = None
+        if is_auto:
+            display_tag = "auto backup"
+            type_label = "(automatic)"
+        elif is_pre_restore:
+            display_tag = "pre-restore backup"
+            type_label = "(pre-restore)"
+
+        auto_color = ("gray55", "gray55")
+
+        title_row = ctk.CTkFrame(self, fg_color="transparent")
+        title_row.pack(fill="x", padx=10, pady=(8, 2))
         ctk.CTkLabel(
-            self,
-            text=tag,
+            title_row,
+            text=display_tag,
             font=ctk.CTkFont(family=font, size=14, weight="bold"),
             anchor="w",
-        ).pack(fill="x", padx=10, pady=(8, 2))
+        ).pack(side="left")
+        if type_label:
+            ctk.CTkLabel(
+                title_row,
+                text=f"  {type_label}",
+                font=ctk.CTkFont(family=font, size=12),
+                text_color=auto_color,
+                anchor="w",
+            ).pack(side="left")
 
         ctk.CTkLabel(
             self,
@@ -67,7 +94,7 @@ class BackupCard(ctk.CTkFrame):
         if storage_items is not None:
             item_parts.append(f"{storage_items} stored")
 
-        subtitle = f"Day {day}  ·  {time_str}  ·  {mod_label}"
+        subtitle = f"Day {day}  ·  {season_name + '  ·  ' if season_name else ''}{time_str}  ·  {mod_label}"
         if item_parts:
             subtitle += "  ·  " + "  ·  ".join(item_parts)
         if ironman:
