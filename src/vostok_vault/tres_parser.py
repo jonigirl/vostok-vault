@@ -55,6 +55,32 @@ def _extract_extresource_refs(val: str) -> list[str]:
     return re.findall(r'ExtResource\("([^"]+)"\)', val)
 
 
+def _parse_all_sub_resources(lines: list[str]) -> dict[str, dict[str, str]]:
+    """Return {sub_resource_id: {prop: raw_value}} for all sub_resource blocks."""
+    result: dict[str, dict[str, str]] = {}
+    header_re = re.compile(r'\[sub_resource\b[^\]]*\bid="([^"]+)"')
+    current_id: str | None = None
+    current_lines: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        m = header_re.match(stripped)
+        if m:
+            if current_id is not None:
+                result[current_id] = _parse_props(current_lines)
+            current_id = m.group(1)
+            current_lines = []
+        elif current_id is not None:
+            if stripped.startswith("[") and stripped.endswith("]"):
+                result[current_id] = _parse_props(current_lines)
+                current_id = None
+                current_lines = []
+            else:
+                current_lines.append(stripped)
+    if current_id is not None:
+        result[current_id] = _parse_props(current_lines)
+    return result
+
+
 def _extract_nested_item_refs(val: str) -> list[str]:
     # Format: Array[ExtResource("type_id")]([ExtResource("a"), ExtResource("b")])
     # Only extract from the array contents, not the type annotation.
@@ -152,40 +178,62 @@ def parse_storage(path: Path) -> list[dict]:
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     ext_map = _parse_ext_resources(lines)
     storage_label = path.stem
-    blocks = _split_sub_resource_blocks(lines)
-    results = []
-    for block in blocks:
-        props = _parse_props(block)
-        if "itemData" not in props:
-            continue
-        refs = _extract_extresource_refs(props["itemData"])
+    sub_map = _parse_all_sub_resources(lines)
+
+    def _sub_refs(val: str) -> list[str]:
+        return re.findall(r'SubResource\("([^"]+)"\)', val)
+
+    def _item_from_slot(props: dict) -> dict | None:
+        refs = _extract_extresource_refs(props.get("itemData", ""))
         if not refs:
-            continue
+            return None
         item_path = ext_map.get(refs[0], "")
         if not item_path or not _is_item_path(item_path):
-            continue
+            return None
         item_name = _item_name_from_path(item_path)
         if not item_name:
-            continue
-
+            return None
         try:
             condition = int(float(props.get("condition", "")))
         except (ValueError, TypeError):
             condition = None
-
         try:
             amount = int(props.get("amount", "1"))
         except (ValueError, TypeError):
             amount = 1
+        return {"item_name": item_name, "condition": condition, "amount": amount}
 
-        results.append(
-            {
-                "item_name": item_name,
-                "condition": condition,
-                "amount": amount,
-                "storage_label": storage_label,
-            }
-        )
+    results = []
+    seen_slot_ids: set[str] = set()
+
+    # Phase 1: items stored inside named furniture containers
+    for sub_id, props in sub_map.items():
+        name_val = props.get("name", "")
+        storage_val = props.get("storage", "")
+        if not name_val or not storage_val:
+            continue
+        container_name = name_val.strip('"')
+        for ref in _sub_refs(storage_val):
+            if ref in seen_slot_ids:
+                continue
+            item = _item_from_slot(sub_map.get(ref, {}))
+            if item is None:
+                continue
+            seen_slot_ids.add(ref)
+            results.append(
+                {**item, "container": container_name, "storage_label": storage_label}
+            )
+
+    # Phase 2: any remaining item slots not inside a container (floor items)
+    for sub_id, props in sub_map.items():
+        if sub_id in seen_slot_ids or "name" in props:
+            continue
+        item = _item_from_slot(props)
+        if item is None:
+            continue
+        seen_slot_ids.add(sub_id)
+        results.append({**item, "container": "", "storage_label": storage_label})
+
     return results
 
 

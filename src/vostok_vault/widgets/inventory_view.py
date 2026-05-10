@@ -169,6 +169,7 @@ class InventoryTable(ctk.CTkFrame):
             for col, (val, w) in enumerate(zip(row_vals, col_widths)):
                 if col == item_col:
                     cell = ctk.CTkFrame(row_frame, fg_color="transparent", width=w)
+                    cell.grid_propagate(False)
                     cell.grid(row=0, column=col, padx=6, pady=3, sticky="w")
                     if rarity in _RARITY_COLOURS:
                         ctk.CTkLabel(

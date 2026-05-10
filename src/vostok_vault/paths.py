@@ -20,9 +20,14 @@ GAME_TRACKED_FILES = [
     "World.tres",
     "Cabin.tres",
     "Tent.tres",
+    "Attic.tres",
+    "Classroom.tres",
+    "Bunker.tres",
     "Traders.tres",
     "Validator.tres",
 ]
+
+SHELTER_NAMES = ["Cabin", "Tent", "Attic", "Classroom", "Bunker"]
 
 MOD_TRACKED_FILES = [
     "mod_config.cfg",

@@ -8,6 +8,7 @@ import customtkinter as ctk
 from ..constants import DIFFICULTY_NAMES, SEASON_NAMES
 from ..fonts import get_font
 from ..mcm_parser import parse_mcm_configs
+from ..paths import SHELTER_NAMES
 from ..tres_parser import (
     parse_character,
     parse_storage,
@@ -81,8 +82,7 @@ class SaveDetailPanel(ctk.CTkFrame):
         self._cached_validator: dict = {}
         self._cached_world: dict = {}
         self._cached_char: list = []
-        self._cached_cabin: list = []
-        self._cached_tent: list = []
+        self._cached_shelters: dict[str, list] = {}
         self._cached_traders: dict = {}
         self._cached_mcm: dict = {}
         self._tabs_populated: set[str] = set()
@@ -380,8 +380,9 @@ class SaveDetailPanel(ctk.CTkFrame):
         validator = parse_validator(backup_path / "Validator.tres")
         world = parse_world(backup_path / "World.tres")
         char_items = parse_character(backup_path / "Character.tres")
-        cabin_items = parse_storage(backup_path / "Cabin.tres")
-        tent_items = parse_storage(backup_path / "Tent.tres")
+        shelters = {
+            name: parse_storage(backup_path / f"{name}.tres") for name in SHELTER_NAMES
+        }
         traders = parse_traders(backup_path / "Traders.tres")
         mcm = parse_mcm_configs(backup_path / "MCM")
         t1 = time.perf_counter()
@@ -390,8 +391,7 @@ class SaveDetailPanel(ctk.CTkFrame):
         self._cached_validator = validator
         self._cached_world = world
         self._cached_char = char_items
-        self._cached_cabin = cabin_items
-        self._cached_tent = tent_items
+        self._cached_shelters = shelters
         self._cached_traders = traders
         self._cached_mcm = mcm
         self.after(0, lambda: self._render_parsed(data))
@@ -493,7 +493,9 @@ class SaveDetailPanel(ctk.CTkFrame):
             row += 1
 
         char_items_parsed = self._cached_char
-        storage_items_parsed = self._cached_cabin + self._cached_tent
+        storage_items_parsed = [
+            i for items in self._cached_shelters.values() for i in items
+        ]
 
         char_weight = sum(
             item_weight(i["item_name"]) for i in char_items_parsed if i.get("item_name")
@@ -724,108 +726,146 @@ class SaveDetailPanel(ctk.CTkFrame):
                 return (priority, name)
             return (name, "")
 
-        for filename in ("Cabin.tres", "Tent.tres"):
-            storage_path = backup_path / filename
-            label = filename.replace(".tres", "")
+        def _matches(i: dict) -> bool:
+            if (
+                filter_text
+                and filter_text not in i["item_name"].lower()
+                and filter_text not in display_name(i["item_name"]).lower()
+            ):
+                return False
+            if (
+                selected_cat != "All"
+                and _ITEM_CATEGORY.get(i["item_name"]) != selected_cat
+            ):
+                return False
+            return True
 
-            all_items: list[dict] = (
-                self._cached_cabin if filename == "Cabin.tres" else self._cached_tent
-            )
+        active_filter = bool(filter_text or selected_cat != "All")
 
-            def _matches(i: dict) -> bool:
-                if (
-                    filter_text
-                    and filter_text not in i["item_name"].lower()
-                    and filter_text not in display_name(i["item_name"]).lower()
-                ):
-                    return False
-                if (
-                    selected_cat != "All"
-                    and _ITEM_CATEGORY.get(i["item_name"]) != selected_cat
-                ):
-                    return False
-                return True
+        for shelter_name in SHELTER_NAMES:
+            storage_path = backup_path / f"{shelter_name}.tres"
+            all_items: list[dict] = self._cached_shelters.get(shelter_name, [])
 
-            items = (
-                [i for i in all_items if _matches(i)]
-                if (filter_text or selected_cat != "All")
-                else all_items
-            )
-            items = sorted(items, key=_sort_key, reverse=self._storage_sort_reverse)
-            active_filter = filter_text or selected_cat != "All"
-            shown_count = (
-                f"  ({len(items)})" if items else ("  (0)" if active_filter else "")
-            )
-            header_text = f"{label}{shown_count}"
+            if not all_items and not storage_path.exists():
+                continue
 
-            section = ctk.CTkFrame(f, fg_color="transparent")
-            section.pack(fill="x", padx=0, pady=0)
-
-            header_btn = ctk.CTkButton(
-                section,
-                text=f"\u25b6  {header_text}",
-                fg_color=("gray85", "#2A2A40"),
-                hover_color=("gray78", "#32324E"),
-                text_color=("gray10", "gray90"),
+            shelter_section = ctk.CTkFrame(f, fg_color="transparent")
+            shelter_section.pack(fill="x", padx=0, pady=(4, 0))
+            ctk.CTkLabel(
+                shelter_section,
+                text=shelter_name.upper(),
+                font=ctk.CTkFont(family=font, size=11, weight="bold"),
+                text_color=("gray55", "gray55"),
                 anchor="w",
-                corner_radius=4,
-                font=ctk.CTkFont(family=font, size=13, weight="bold"),
-            )
-            header_btn.pack(fill="x", padx=4, pady=(8, 0))
-
-            content_frame = ctk.CTkFrame(section, fg_color="transparent")
+            ).pack(fill="x", padx=8, pady=(6, 2))
 
             if not storage_path.exists():
                 ctk.CTkLabel(
-                    content_frame,
-                    text="[missing]",
+                    shelter_section,
+                    text="[not found in this backup]",
                     font=ctk.CTkFont(family=font, size=13),
                     text_color=("gray70", "gray70"),
                     anchor="w",
-                ).pack(fill="x", padx=20, pady=(4, 4))
-            elif not items:
+                ).pack(fill="x", padx=16, pady=(2, 4))
+                continue
+
+            # Group by container name; "" = floor/uncategorised
+            containers: dict[str, list[dict]] = {}
+            for item in all_items:
+                key = item.get("container", "")
+                containers.setdefault(key, []).append(item)
+
+            if not containers:
                 ctk.CTkLabel(
-                    content_frame,
+                    shelter_section,
                     text="Empty",
                     font=ctk.CTkFont(family=font, size=13),
                     text_color=("gray70", "gray70"),
                     anchor="w",
-                ).pack(fill="x", padx=20, pady=(4, 4))
-            else:
-                table_items = [
-                    {
-                        "slot": "",
-                        "item_name": i["item_name"],
-                        "condition": i["condition"],
-                        "amount": i["amount"],
-                        "attachments": [],
-                    }
-                    for i in items
-                ]
-                storage_table = InventoryTable(content_frame, show_slot=False)
-                storage_table.pack(fill="x", padx=8, pady=(4, 4))
-                storage_table.populate(table_items)
+                ).pack(fill="x", padx=16, pady=(2, 4))
+                continue
 
-                total = sum(item_weight(i["item_name"]) for i in items)
-                if total > 0:
+            shelter_total_weight: float = 0.0
+            for container_label, raw_items in sorted(
+                containers.items(), key=lambda kv: kv[0].lower() if kv[0] else "\xff"
+            ):
+                items = (
+                    [i for i in raw_items if _matches(i)]
+                    if active_filter
+                    else raw_items
+                )
+                items = sorted(items, key=_sort_key, reverse=self._storage_sort_reverse)
+                display_label = container_label if container_label else "Uncategorised"
+                section_key = f"{shelter_name}:{display_label}"
+                shown_count = (
+                    f"  ({len(items)})" if items else ("  (0)" if active_filter else "")
+                )
+                header_text = f"{display_label}{shown_count}"
+
+                section = ctk.CTkFrame(shelter_section, fg_color="transparent")
+                section.pack(fill="x", padx=0, pady=0)
+
+                header_btn = ctk.CTkButton(
+                    section,
+                    text=f"\u25b6  {header_text}",
+                    fg_color=("gray85", "#2A2A40"),
+                    hover_color=("gray78", "#32324E"),
+                    text_color=("gray10", "gray90"),
+                    anchor="w",
+                    corner_radius=4,
+                    font=ctk.CTkFont(family=font, size=13, weight="bold"),
+                )
+                header_btn.pack(fill="x", padx=4, pady=(4, 0))
+
+                content_frame = ctk.CTkFrame(section, fg_color="transparent")
+
+                if not items:
                     ctk.CTkLabel(
                         content_frame,
-                        text=f"Total weight: {total:.1f} kg",
+                        text="Empty" if not active_filter else "No matches",
                         font=ctk.CTkFont(family=font, size=13),
-                        text_color=("gray65", "gray65"),
-                        anchor="e",
-                    ).pack(fill="x", padx=16, pady=(0, 8))
+                        text_color=("gray70", "gray70"),
+                        anchor="w",
+                    ).pack(fill="x", padx=20, pady=(4, 4))
+                else:
+                    table_items = [
+                        {
+                            "slot": "",
+                            "item_name": i["item_name"],
+                            "condition": i["condition"],
+                            "amount": i["amount"],
+                            "attachments": [],
+                        }
+                        for i in items
+                    ]
+                    storage_table = InventoryTable(content_frame, show_slot=False)
+                    storage_table.pack(fill="x", padx=8, pady=(4, 4))
+                    storage_table.populate(table_items)
+                    shelter_total_weight += sum(
+                        item_weight(i["item_name"]) for i in items
+                    )
 
-            is_expanded = [self._storage_expanded.get(label, bool(active_filter))]
-            self._storage_expanded[label] = is_expanded[0]
-            if is_expanded[0]:
-                content_frame.pack(fill="x", padx=4, pady=(0, 8))
-                header_btn.configure(text=f"\u25bc  {header_text}")
-            header_btn.configure(
-                command=make_toggle(
-                    header_btn, content_frame, is_expanded, label, header_text
+                is_expanded = [
+                    self._storage_expanded.get(section_key, bool(active_filter))
+                ]
+                self._storage_expanded[section_key] = is_expanded[0]
+                if is_expanded[0]:
+                    content_frame.pack(fill="x", padx=4, pady=(0, 4))
+                    header_btn.configure(text=f"\u25bc  {header_text}")
+                header_btn.configure(
+                    command=make_toggle(
+                        header_btn, content_frame, is_expanded, section_key, header_text
+                    )
                 )
-            )
+
+            if shelter_total_weight > 0:
+                ctk.CTkLabel(
+                    shelter_section,
+                    text=f"Total weight: {shelter_total_weight:.1f} kg",
+                    font=ctk.CTkFont(family=font, size=13),
+                    text_color=("gray65", "gray65"),
+                    anchor="e",
+                ).pack(fill="x", padx=16, pady=(0, 8))
 
     def _populate_traders(self, data: dict) -> None:
         self._clear(self._traders_scroll)
@@ -855,7 +895,7 @@ class SaveDetailPanel(ctk.CTkFrame):
 
         ctk.CTkLabel(
             f,
-            text="Items purchased from each trader. Resets when the trader restocks.",
+            text="Completed tasks per trader. Completing tasks reduces their trade tax.",
             font=ctk.CTkFont(family=font, size=12),
             text_color=("gray70", "gray70"),
             anchor="w",
@@ -877,10 +917,10 @@ class SaveDetailPanel(ctk.CTkFrame):
 
             return _toggle
 
-        for trader_key, items in trader_data.items():
+        for trader_key, tasks in trader_data.items():
             header_text = trader_key.replace("_", " ").title()
             count_text = (
-                f"  ({len(items)} purchased)" if items else "  (none purchased)"
+                f"  ({len(tasks)} completed)" if tasks else "  (no tasks completed)"
             )
             is_expanded = [self._traders_expanded.get(trader_key, False)]
             self._traders_expanded[trader_key] = is_expanded[0]
@@ -899,19 +939,19 @@ class SaveDetailPanel(ctk.CTkFrame):
             )
             header_btn.pack(fill="x", padx=4, pady=(8, 0))
             content_frame = ctk.CTkFrame(section, fg_color="transparent")
-            if not items:
+            if not tasks:
                 ctk.CTkLabel(
                     content_frame,
-                    text="Nothing purchased yet",
+                    text="No tasks completed yet",
                     font=ctk.CTkFont(family=font, size=13),
                     text_color=("gray70", "gray70"),
                     anchor="w",
                 ).pack(fill="x", padx=20, pady=(4, 4))
             else:
-                for item_name in items:
+                for task_name in tasks:
                     ctk.CTkLabel(
                         content_frame,
-                        text=item_name,
+                        text=f"\u2713  {task_name}",
                         font=ctk.CTkFont(family=font, size=13),
                         anchor="w",
                     ).pack(fill="x", padx=20, pady=(2, 2))
