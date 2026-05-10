@@ -10,6 +10,7 @@ from tkinter import messagebox
 import customtkinter as ctk
 
 from . import backup as bk
+from . import repair as rp
 from . import tres_parser, updater
 from .constants import (
     APP_TITLE,
@@ -20,11 +21,12 @@ from .constants import (
 )
 from .fonts import get_font, init_font, unload_bundled_fonts
 from .logging_setup import setup_logging
-from .paths import SAVE_DIR
+from .paths import ITEMS_JSON, SAVE_DIR
 from .settings import load_settings, save_settings
 from .watcher import SaveWatcher
 from .widgets.backup_list import BackupListPanel
 from .widgets.dialogs import SettingsDialog, TagDialog, UpdateDialog
+from .widgets.repair_dialog import RepairConfirmDialog
 from .widgets.save_detail import SaveDetailPanel
 
 log = logging.getLogger(__name__)
