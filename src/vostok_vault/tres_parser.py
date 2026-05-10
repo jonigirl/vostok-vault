@@ -25,26 +25,6 @@ def _parse_ext_resources(lines: list[str]) -> dict[str, str]:
     return ext_map
 
 
-def _split_sub_resource_blocks(lines: list[str]) -> list[list[str]]:
-    blocks: list[list[str]] = []
-    current: list[str] | None = None
-    for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("[sub_resource"):
-            if current is not None:
-                blocks.append(current)
-            current = []
-        elif current is not None:
-            if stripped.startswith("[") and stripped.endswith("]"):
-                blocks.append(current)
-                current = None
-            else:
-                current.append(stripped)
-    if current is not None:
-        blocks.append(current)
-    return blocks
-
-
 def _parse_props(block_lines: list[str]) -> dict[str, str]:
     props: dict[str, str] = {}
     for line in block_lines:
@@ -119,40 +99,39 @@ def _is_item_path(path: str) -> bool:
     return any(path.startswith(prefix) for prefix in _ITEM_SUBTREES)
 
 
+def _resolve_item(props: dict[str, str], ext_map: dict[str, str]) -> dict | None:
+    refs = _extract_extresource_refs(props.get("itemData", ""))
+    if not refs:
+        return None
+    item_path = ext_map.get(refs[0], "")
+    if not item_path or not _is_item_path(item_path):
+        return None
+    item_name = _item_name_from_path(item_path)
+    if not item_name:
+        return None
+    try:
+        condition = int(float(props.get("condition", "")))
+    except (ValueError, TypeError):
+        condition = None
+    try:
+        amount = int(props.get("amount", "1"))
+    except (ValueError, TypeError):
+        amount = 1
+    return {"item_name": item_name, "condition": condition, "amount": amount}
+
+
 def parse_character(path: Path) -> list[dict]:
     if not path.exists():
         return []
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     ext_map = _parse_ext_resources(lines)
-    blocks = _split_sub_resource_blocks(lines)
+    sub_map = _parse_all_sub_resources(lines)
     results = []
-    for block in blocks:
-        props = _parse_props(block)
-        if "itemData" not in props:
+    for props in sub_map.values():
+        base = _resolve_item(props, ext_map)
+        if base is None:
             continue
-        refs = _extract_extresource_refs(props["itemData"])
-        if not refs:
-            continue
-        item_ref = refs[0]
-        item_path = ext_map.get(item_ref, "")
-        if not item_path or not _is_item_path(item_path):
-            continue
-        item_name = _item_name_from_path(item_path)
-        if not item_name:
-            continue
-
         slot = props.get("slot", "").strip('"') or "Storage"
-
-        try:
-            condition = int(float(props.get("condition", "")))
-        except (ValueError, TypeError):
-            condition = None
-
-        try:
-            amount = int(props.get("amount", "1"))
-        except (ValueError, TypeError):
-            amount = 1
-
         attachments: list[str] = []
         nested_val = props.get("nested", "")
         if nested_val:
@@ -162,13 +141,12 @@ def parse_character(path: Path) -> list[dict]:
                     aname = _item_name_from_path(npath)
                     if aname:
                         attachments.append(aname)
-
         results.append(
             {
                 "slot": slot,
-                "item_name": item_name,
-                "condition": condition,
-                "amount": amount,
+                "item_name": base["item_name"],
+                "condition": base["condition"],
+                "amount": base["amount"],
                 "attachments": attachments,
             }
         )
@@ -186,26 +164,6 @@ def parse_storage(path: Path) -> list[dict]:
     def _sub_refs(val: str) -> list[str]:
         return re.findall(r'SubResource\("([^"]+)"\)', val)
 
-    def _item_from_slot(props: dict) -> dict | None:
-        refs = _extract_extresource_refs(props.get("itemData", ""))
-        if not refs:
-            return None
-        item_path = ext_map.get(refs[0], "")
-        if not item_path or not _is_item_path(item_path):
-            return None
-        item_name = _item_name_from_path(item_path)
-        if not item_name:
-            return None
-        try:
-            condition = int(float(props.get("condition", "")))
-        except (ValueError, TypeError):
-            condition = None
-        try:
-            amount = int(props.get("amount", "1"))
-        except (ValueError, TypeError):
-            amount = 1
-        return {"item_name": item_name, "condition": condition, "amount": amount}
-
     results = []
     seen_slot_ids: set[str] = set()
 
@@ -219,7 +177,7 @@ def parse_storage(path: Path) -> list[dict]:
         for ref in _sub_refs(storage_val):
             if ref in seen_slot_ids:
                 continue
-            item = _item_from_slot(sub_map.get(ref, {}))
+            item = _resolve_item(sub_map.get(ref, {}), ext_map)
             if item is None:
                 continue
             seen_slot_ids.add(ref)
@@ -231,7 +189,7 @@ def parse_storage(path: Path) -> list[dict]:
     for sub_id, props in sub_map.items():
         if sub_id in seen_slot_ids or "name" in props:
             continue
-        item = _item_from_slot(props)
+        item = _resolve_item(props, ext_map)
         if item is None:
             continue
         seen_slot_ids.add(sub_id)

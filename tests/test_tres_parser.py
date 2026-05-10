@@ -311,6 +311,37 @@ def test_parse_storage_label_tent(tmp_path: Path) -> None:
     assert parse_storage(p)[0]["storage_label"] == "Tent"
 
 
+STORAGE_CONTAINER_TRES = """\
+[gd_resource type="Resource" script_class="ShelterSave" format=3]
+[ext_resource type="Script" path="res://Scripts/SlotData.gd" id="1"]
+[ext_resource type="Resource" path="res://Items/Medical/Medkit/Medkit.tres" id="2"]
+[sub_resource type="Resource" id="Slot_abc"]
+script = ExtResource("1")
+itemData = ExtResource("2")
+condition = 80
+amount = 2
+[sub_resource type="Resource" id="Furniture_xyz"]
+name = "Freezer"
+storage = Array[SubResource("x")]([SubResource("Slot_abc")])
+[resource]
+"""
+
+
+def test_parse_storage_container_name(tmp_path: Path) -> None:
+    p = tmp_path / "Cabin.tres"
+    p.write_text(STORAGE_CONTAINER_TRES, encoding="utf-8")
+    items = parse_storage(p)
+    assert len(items) == 1
+    assert items[0]["container"] == "Freezer"
+
+
+def test_parse_storage_container_item_not_duplicated(tmp_path: Path) -> None:
+    p = tmp_path / "Cabin.tres"
+    p.write_text(STORAGE_CONTAINER_TRES, encoding="utf-8")
+    items = parse_storage(p)
+    assert len(items) == 1
+
+
 def test_parse_validator_returns_player_id(tmp_path: Path) -> None:
     p = tmp_path / "Validator.tres"
     p.write_text(VALIDATOR_TRES, encoding="utf-8")
