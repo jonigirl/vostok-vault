@@ -331,3 +331,86 @@ def load_trader_task_catalog() -> dict[str, dict]:
         return {}
     with TRADERS_CATALOG_JSON.open(encoding="utf-8") as fh:
         return json.load(fh)
+
+
+def _filter_subresource_refs(value: str, orphaned_sub_ids: set[str]) -> str:
+    # Handle Array[...]([ inner ]) format
+    m = re.search(r"(Array\[[^\]]+\]\(\[)(.*?)(\]\))", value, re.DOTALL)
+    if m:
+        inner = m.group(2)
+        refs = re.findall(r'SubResource\("([^"]+)"\)', inner)
+        kept = [f'SubResource("{r}")' for r in refs if r not in orphaned_sub_ids]
+        return value[: m.start(2)] + ", ".join(kept) + value[m.end(2) :]
+
+    # Handle plain [ inner ] format
+    m = re.search(r"\[(.*?)\]", value, re.DOTALL)
+    if m:
+        inner = m.group(1)
+        refs = re.findall(r'SubResource\("([^"]+)"\)', inner)
+        if refs:
+            kept = [f'SubResource("{r}")' for r in refs if r not in orphaned_sub_ids]
+            return value[: m.start(1)] + ", ".join(kept) + value[m.end(1) :]
+
+    return value
+
+
+def _rewrite_subresource_refs(line: str, orphaned_sub_ids: set[str]) -> str:
+    if " = " not in line:
+        return line
+    if not any(f'SubResource("{sid}")' in line for sid in orphaned_sub_ids):
+        return line
+    key, sep, value = line.partition(" = ")
+    new_value = _filter_subresource_refs(value, orphaned_sub_ids)
+    return f"{key}{sep}{new_value}"
+
+
+def strip_orphaned_blocks(
+    lines: list[str],
+    orphaned_ext_ids: set[str],
+    orphaned_sub_ids: set[str],
+) -> list[str]:
+    _id_re = re.compile(r'\bid="([^"]+)"')
+
+    result: list[str] = []
+    in_orphaned_sub = False
+    in_rewrite_block = False
+
+    for line in lines:
+        stripped = line.strip()
+
+        if stripped.startswith("[") and stripped.endswith("]"):
+            if stripped.startswith("[ext_resource"):
+                in_orphaned_sub = False
+                in_rewrite_block = False
+                m = _id_re.search(stripped)
+                if m and m.group(1) in orphaned_ext_ids:
+                    continue
+                result.append(line)
+                continue
+
+            if stripped.startswith("[sub_resource"):
+                m = _id_re.search(stripped)
+                sub_id = m.group(1) if m else ""
+                if sub_id in orphaned_sub_ids:
+                    in_orphaned_sub = True
+                    in_rewrite_block = False
+                    continue
+                in_orphaned_sub = False
+                in_rewrite_block = True
+                result.append(line)
+                continue
+
+            in_orphaned_sub = False
+            in_rewrite_block = stripped == "[resource]"
+            result.append(line)
+            continue
+
+        if in_orphaned_sub:
+            continue
+
+        if in_rewrite_block and orphaned_sub_ids:
+            line = _rewrite_subresource_refs(line, orphaned_sub_ids)
+
+        result.append(line)
+
+    return result
