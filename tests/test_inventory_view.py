@@ -44,6 +44,7 @@ def reset_item_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(iv, "_ITEM_RARITY", {})
     monkeypatch.setattr(iv, "_ITEM_DISPLAY_NAME", {})
     monkeypatch.setattr(iv, "_ITEM_WEIGHT", {})
+    monkeypatch.setattr(iv, "_ITEM_CATEGORY", {})
     monkeypatch.setattr(iv, "_ITEM_ICON_FILE", {})
     monkeypatch.setattr(iv, "_ITEM_ICON_CACHE", {})
 
@@ -154,3 +155,25 @@ def test_rarity_color_common_returns_none() -> None:
 
 def test_rarity_color_unknown_returns_none() -> None:
     assert iv._rarity_color("Mystery Item") is None
+
+
+# ---------------------------------------------------------------------------
+# available_categories
+# ---------------------------------------------------------------------------
+
+
+def test_available_categories_returns_sorted_list() -> None:
+    cats = iv.available_categories()
+    assert cats == sorted(cats)
+
+
+def test_available_categories_contains_mock_values() -> None:
+    cats = iv.available_categories()
+    assert "Consumables" in cats
+    assert "Weapon" in cats
+    assert "Valuable" in cats
+
+
+def test_available_categories_no_duplicates() -> None:
+    cats = iv.available_categories()
+    assert len(cats) == len(set(cats))

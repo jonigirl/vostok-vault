@@ -279,3 +279,38 @@ def parse_validator(path: Path) -> dict:
         if in_resource and stripped.startswith("ID = "):
             return {"player_id": stripped[5:].strip().strip('"')}
     return {"player_id": None}
+
+
+_STRING_ARRAY_RE = re.compile(r"^Array\[String\]\((\[.*\])\)$", re.DOTALL)
+
+
+def parse_traders(path: Path) -> dict[str, list[str]]:
+    """Return a dict mapping trader-type name → list of purchased item names.
+
+    Fields are discovered dynamically from the resource block so new trader
+    types added by future game updates appear automatically.  Only fields
+    whose values are ``Array[String]`` are included; other fields (e.g.
+    ``taskNotes``) are skipped.
+    """
+    if not path.exists():
+        return {}
+    in_resource = False
+    result: dict[str, list[str]] = {}
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        stripped = line.strip()
+        if stripped == "[resource]":
+            in_resource = True
+            continue
+        if in_resource and stripped.startswith("[") and stripped.endswith("]"):
+            break
+        if not in_resource or " = " not in stripped:
+            continue
+        key, _, val = stripped.partition(" = ")
+        key = key.strip()
+        val = val.strip()
+        m = _STRING_ARRAY_RE.match(val)
+        if not m:
+            continue
+        names = re.findall(r'"([^"]+)"', m.group(1))
+        result[key] = names
+    return result

@@ -16,6 +16,7 @@ _RARITY_COLOURS: dict[str, tuple[str, str]] = {
 _ITEM_RARITY: dict[str, str] = {}
 _ITEM_DISPLAY_NAME: dict[str, str] = {}
 _ITEM_WEIGHT: dict[str, float] = {}
+_ITEM_CATEGORY: dict[str, str] = {}
 _ITEM_ICON_FILE: dict[str, str] = {}
 _ITEM_ICON_CACHE: dict[str, ctk.CTkImage] = {}
 _RARITY_LOADED = False
@@ -35,10 +36,17 @@ def _ensure_rarity_loaded() -> None:
             _ITEM_RARITY[key] = item.get("rarity") or "common"
             _ITEM_DISPLAY_NAME[key] = item.get("display_name") or key
             _ITEM_WEIGHT[key] = float(item.get("weight") or 0.0)
+            _ITEM_CATEGORY[key] = item.get("category") or ""
             if item.get("icon_file"):
                 _ITEM_ICON_FILE[key] = item["icon_file"]
     except Exception:
         pass
+
+
+def available_categories() -> list[str]:
+    """Return sorted list of category names present in items.json."""
+    _ensure_rarity_loaded()
+    return sorted(set(v for v in _ITEM_CATEGORY.values() if v))
 
 
 def _rarity_color(name: str) -> tuple[str, str] | None:

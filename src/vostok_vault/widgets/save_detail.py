@@ -7,10 +7,18 @@ import customtkinter as ctk
 from ..constants import DIFFICULTY_NAMES, SEASON_NAMES
 from ..fonts import get_font
 from ..mcm_parser import parse_mcm_configs
-from ..tres_parser import parse_character, parse_storage, parse_validator, parse_world
+from ..tres_parser import (
+    parse_character,
+    parse_storage,
+    parse_traders,
+    parse_validator,
+    parse_world,
+)
 from .inventory_view import (
+    _ITEM_CATEGORY,
     _ITEM_RARITY,
     InventoryTable,
+    available_categories,
     display_name,
     item_weight,
     rarity_counts,
@@ -84,6 +92,8 @@ class SaveDetailPanel(ctk.CTkFrame):
         self._mcm_expanded: dict[str, bool] = {}
         self._storage_sort_key: str = "Name"
         self._storage_sort_reverse: bool = False
+        self._storage_category_var: ctk.StringVar | None = None
+        self._storage_category_menu: ctk.CTkOptionMenu | None = None
         self._build()
 
     def _build(self) -> None:
@@ -93,7 +103,7 @@ class SaveDetailPanel(ctk.CTkFrame):
         self._tabs = ctk.CTkTabview(self, anchor="nw")
         self._tabs.grid(row=0, column=0, sticky="nsew", padx=8, pady=8)
 
-        for name in ("Overview", "Character", "Storage", "Mods"):
+        for name in ("Overview", "Character", "Storage", "Traders", "Mods"):
             tab = self._tabs.add(name)
             tab.grid_rowconfigure(0, weight=1)
             tab.grid_columnconfigure(0, weight=1)
@@ -108,7 +118,8 @@ class SaveDetailPanel(ctk.CTkFrame):
         storage_tab = self._tabs.tab("Storage")
         storage_tab.grid_rowconfigure(0, weight=0)
         storage_tab.grid_rowconfigure(1, weight=0)
-        storage_tab.grid_rowconfigure(2, weight=1)
+        storage_tab.grid_rowconfigure(2, weight=0)
+        storage_tab.grid_rowconfigure(3, weight=1)
         storage_tab.grid_columnconfigure(0, weight=1)
 
         self._storage_filter_var = ctk.StringVar()
@@ -126,8 +137,27 @@ class SaveDetailPanel(ctk.CTkFrame):
         )
         self._storage_filter_var.trace_add("write", self._on_storage_filter_change)
 
+        cat_frame = ctk.CTkFrame(storage_tab, fg_color="transparent")
+        cat_frame.grid(row=1, column=0, sticky="ew", padx=8, pady=(0, 4))
+        ctk.CTkLabel(
+            cat_frame,
+            text="Category:",
+            font=ctk.CTkFont(family=font, size=13),
+            text_color=("gray50", "gray60"),
+        ).pack(side="left", padx=(0, 6))
+        self._storage_category_var = ctk.StringVar(value="All")
+        self._storage_category_menu = ctk.CTkOptionMenu(
+            cat_frame,
+            values=["All"],
+            variable=self._storage_category_var,
+            font=ctk.CTkFont(family=font, size=13),
+            width=160,
+            command=self._on_storage_category_change,
+        )
+        self._storage_category_menu.pack(side="left")
+
         sort_frame = ctk.CTkFrame(storage_tab, fg_color="transparent")
-        sort_frame.grid(row=1, column=0, sticky="ew", padx=8, pady=(0, 4))
+        sort_frame.grid(row=2, column=0, sticky="ew", padx=8, pady=(0, 4))
         ctk.CTkLabel(
             sort_frame,
             text="Sort:",
@@ -157,7 +187,10 @@ class SaveDetailPanel(ctk.CTkFrame):
         self._storage_sort_dir_btn.pack(side="left", padx=(6, 0))
 
         self._storage_scroll = ctk.CTkScrollableFrame(storage_tab)
-        self._storage_scroll.grid(row=2, column=0, sticky="nsew")
+        self._storage_scroll.grid(row=3, column=0, sticky="nsew")
+
+        self._traders_scroll = ctk.CTkScrollableFrame(self._tabs.tab("Traders"))
+        self._traders_scroll.grid(row=0, column=0, sticky="nsew")
 
         self._mods_scroll = ctk.CTkScrollableFrame(self._tabs.tab("Mods"))
         self._mods_scroll.grid(row=0, column=0, sticky="nsew")
@@ -174,6 +207,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             self._overview_scroll,
             self._char_scroll,
             self._storage_scroll,
+            self._traders_scroll,
             self._mods_scroll,
         ):
             self._clear(frame)
@@ -185,6 +219,10 @@ class SaveDetailPanel(ctk.CTkFrame):
         ).pack(pady=60)
 
     def _on_storage_filter_change(self, *_args) -> None:
+        if self._current:
+            self._populate_storage(self._current)
+
+    def _on_storage_category_change(self, _value: str) -> None:
         if self._current:
             self._populate_storage(self._current)
 
@@ -206,6 +244,11 @@ class SaveDetailPanel(ctk.CTkFrame):
         if not data:
             self._show_placeholder()
             return
+        cats = available_categories()
+        if self._storage_category_menu is not None:
+            self._storage_category_menu.configure(values=["All"] + cats)
+            if self._storage_category_var.get() not in (["All"] + cats):
+                self._storage_category_var.set("All")
         t0 = time.perf_counter()
         self._populate_overview(data)
         t1 = time.perf_counter()
@@ -213,15 +256,18 @@ class SaveDetailPanel(ctk.CTkFrame):
         t2 = time.perf_counter()
         self._populate_storage(data)
         t3 = time.perf_counter()
-        self._populate_mods(data)
+        self._populate_traders(data)
         t4 = time.perf_counter()
+        self._populate_mods(data)
+        t5 = time.perf_counter()
         log.debug(
-            "show_backup timing — overview: %.3fs  character: %.3fs  storage: %.3fs  mods: %.3fs  total: %.3fs",
+            "show_backup timing — overview: %.3fs  character: %.3fs  storage: %.3fs  traders: %.3fs  mods: %.3fs  total: %.3fs",
             t1 - t0,
             t2 - t1,
             t3 - t2,
             t4 - t3,
-            t4 - t0,
+            t5 - t4,
+            t5 - t0,
         )
 
     def _populate_overview(self, data: dict) -> None:
@@ -511,6 +557,9 @@ class SaveDetailPanel(ctk.CTkFrame):
         f = self._storage_scroll
         backup_path = Path(data.get("_path", ""))
         filter_text = self._storage_filter_var.get().lower().strip()
+        selected_cat = (
+            self._storage_category_var.get() if self._storage_category_var else "All"
+        )
 
         def make_toggle(btn, frame, flag, key, header_text):
             def _toggle():
@@ -550,19 +599,29 @@ class SaveDetailPanel(ctk.CTkFrame):
             if storage_path.exists():
                 all_items = parse_storage(storage_path)
 
+            def _matches(i: dict) -> bool:
+                if (
+                    filter_text
+                    and filter_text not in i["item_name"].lower()
+                    and filter_text not in display_name(i["item_name"]).lower()
+                ):
+                    return False
+                if (
+                    selected_cat != "All"
+                    and _ITEM_CATEGORY.get(i["item_name"]) != selected_cat
+                ):
+                    return False
+                return True
+
             items = (
-                [
-                    i
-                    for i in all_items
-                    if filter_text in i["item_name"].lower()
-                    or filter_text in display_name(i["item_name"]).lower()
-                ]
-                if filter_text
+                [i for i in all_items if _matches(i)]
+                if (filter_text or selected_cat != "All")
                 else all_items
             )
             items = sorted(items, key=_sort_key, reverse=self._storage_sort_reverse)
+            active_filter = filter_text or selected_cat != "All"
             shown_count = (
-                f"  ({len(items)})" if items else ("  (0)" if filter_text else "")
+                f"  ({len(items)})" if items else ("  (0)" if active_filter else "")
             )
             header_text = f"{label}{shown_count}"
 
@@ -624,7 +683,7 @@ class SaveDetailPanel(ctk.CTkFrame):
                         anchor="e",
                     ).pack(fill="x", padx=16, pady=(0, 8))
 
-            is_expanded = [self._storage_expanded.get(label, bool(filter_text))]
+            is_expanded = [self._storage_expanded.get(label, bool(active_filter))]
             if is_expanded[0]:
                 content_frame.pack(fill="x", padx=4, pady=(0, 8))
                 header_btn.configure(text=f"\u25bc  {header_text}")
@@ -632,6 +691,98 @@ class SaveDetailPanel(ctk.CTkFrame):
                 command=make_toggle(
                     header_btn, content_frame, is_expanded, label, header_text
                 )
+            )
+
+    def _populate_traders(self, data: dict) -> None:
+        self._clear(self._traders_scroll)
+        font = get_font()
+        f = self._traders_scroll
+        backup_path = Path(data.get("_path", ""))
+        traders_path = backup_path / "Traders.tres"
+
+        if not traders_path.exists():
+            ctk.CTkLabel(
+                f,
+                text="No Traders.tres in this backup.",
+                font=ctk.CTkFont(family=font, size=13),
+                text_color=("gray70", "gray70"),
+            ).pack(pady=20)
+            return
+
+        trader_data = parse_traders(traders_path)
+        if not trader_data:
+            ctk.CTkLabel(
+                f,
+                text="No trader data found.",
+                font=ctk.CTkFont(family=font, size=13),
+                text_color=("gray70", "gray70"),
+            ).pack(pady=20)
+            return
+
+        ctk.CTkLabel(
+            f,
+            text="Items purchased from each trader. Resets when the trader restocks.",
+            font=ctk.CTkFont(family=font, size=12),
+            text_color=("gray70", "gray70"),
+            anchor="w",
+            wraplength=400,
+            justify="left",
+        ).pack(fill="x", padx=8, pady=(8, 4))
+
+        for trader_key, items in trader_data.items():
+            header_text = trader_key.replace("_", " ").title()
+            count_text = (
+                f"  ({len(items)} purchased)" if items else "  (none purchased)"
+            )
+            section = ctk.CTkFrame(f, fg_color="transparent")
+            section.pack(fill="x", padx=0, pady=0)
+            header_btn = ctk.CTkButton(
+                section,
+                text=f"\u25bc  {header_text}{count_text}",
+                fg_color=("gray85", "#2A2A40"),
+                hover_color=("gray78", "#32324E"),
+                text_color=("gray10", "gray90"),
+                anchor="w",
+                corner_radius=4,
+                font=ctk.CTkFont(family=font, size=13, weight="bold"),
+            )
+            header_btn.pack(fill="x", padx=4, pady=(8, 0))
+            content_frame = ctk.CTkFrame(section, fg_color="transparent")
+            if not items:
+                ctk.CTkLabel(
+                    content_frame,
+                    text="Nothing purchased yet",
+                    font=ctk.CTkFont(family=font, size=13),
+                    text_color=("gray70", "gray70"),
+                    anchor="w",
+                ).pack(fill="x", padx=20, pady=(4, 4))
+            else:
+                for item_name in items:
+                    ctk.CTkLabel(
+                        content_frame,
+                        text=item_name,
+                        font=ctk.CTkFont(family=font, size=13),
+                        anchor="w",
+                    ).pack(fill="x", padx=20, pady=(2, 2))
+            content_frame.pack(fill="x", padx=4, pady=(0, 4))
+
+            def _make_toggle(btn, frame, header, count):
+                expanded = [True]
+
+                def _toggle():
+                    if expanded[0]:
+                        frame.pack_forget()
+                        btn.configure(text=f"\u25b6  {header}{count}")
+                        expanded[0] = False
+                    else:
+                        frame.pack(fill="x", padx=4, pady=(0, 4))
+                        btn.configure(text=f"\u25bc  {header}{count}")
+                        expanded[0] = True
+
+                return _toggle
+
+            header_btn.configure(
+                command=_make_toggle(header_btn, content_frame, header_text, count_text)
             )
 
     def _populate_mods(self, data: dict) -> None:

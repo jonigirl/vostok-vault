@@ -1,3 +1,4 @@
+import json
 import os
 import webbrowser
 
@@ -6,8 +7,25 @@ import customtkinter as ctk
 from ..backup import _sanitise_tag
 from ..fonts import FONT_ATKINSON, FONT_OPENDYSLEXIC, get_font
 from ..logging_setup import setup_logging
-from ..paths import LOG_FILE
+from ..paths import ITEMS_JSON, LOG_FILE
 from ..settings import load_settings, save_settings
+
+
+def _items_db_info() -> str:
+    """Return a short summary of the bundled items.json metadata, or empty string."""
+    if not ITEMS_JSON.exists():
+        return ""
+    try:
+        meta = json.loads(ITEMS_JSON.read_text(encoding="utf-8"))
+        version = meta.get("game_version") or ""
+        total = meta.get("total") or ""
+        if version and total:
+            return f"Item DB: game v{version}  ·  {total} items"
+        if version:
+            return f"Item DB: game v{version}"
+    except Exception:
+        pass
+    return ""
 
 
 class _UpdateDialog(ctk.CTkToplevel):
@@ -274,7 +292,16 @@ class _SettingsDialog(ctk.CTkToplevel):
             text="Save & Restart",
             font=ctk.CTkFont(family=font, size=13),
             command=self._save,
-        ).pack(padx=20, pady=(8, 16))
+        ).pack(padx=20, pady=(8, 12))
+
+        db_info = _items_db_info()
+        if db_info:
+            ctk.CTkLabel(
+                self,
+                text=db_info,
+                font=ctk.CTkFont(family=font, size=10),
+                text_color=("gray55", "gray55"),
+            ).pack(padx=20, pady=(0, 12))
 
         self.grab_set()
         self.transient(parent)

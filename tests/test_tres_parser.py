@@ -6,6 +6,7 @@ from vostok_vault.tres_parser import (
     _is_item_path,
     parse_character,
     parse_storage,
+    parse_traders,
     parse_validator,
     parse_world,
 )
@@ -245,6 +246,63 @@ def test_parse_storage_label_from_filename(tmp_path: Path) -> None:
     p = tmp_path / "Cabin.tres"
     p.write_text(STORAGE_TRES, encoding="utf-8")
     assert parse_storage(p)[0]["storage_label"] == "Cabin"
+
+
+# ---------------------------------------------------------------------------
+# parse_traders
+# ---------------------------------------------------------------------------
+
+TRADERS_TRES = """\
+[gd_resource type="Resource" script_class="TraderSave" format=3]
+[ext_resource type="Script" path="res://Scripts/TraderSave.gd" id="1"]
+[ext_resource type="Script" path="res://Scripts/TaskData.gd" id="2"]
+[ext_resource type="Resource" path="res://Traders/Generalist/Tasks/01_Task.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+generalist = Array[String](["Backpains", "Prime Time"])
+doctor = Array[String]([])
+gunsmith = Array[String](["AK-74"])
+grandma = Array[String]([])
+taskNotes = Array[ExtResource("2")]([ExtResource("3")])
+"""
+
+
+def test_parse_traders_missing_file(tmp_path: Path) -> None:
+    assert parse_traders(tmp_path / "missing.tres") == {}
+
+
+def test_parse_traders_returns_all_string_array_fields(tmp_path: Path) -> None:
+    p = tmp_path / "Traders.tres"
+    p.write_text(TRADERS_TRES, encoding="utf-8")
+    result = parse_traders(p)
+    assert set(result.keys()) == {"generalist", "doctor", "gunsmith", "grandma"}
+
+
+def test_parse_traders_populated_trader(tmp_path: Path) -> None:
+    p = tmp_path / "Traders.tres"
+    p.write_text(TRADERS_TRES, encoding="utf-8")
+    assert parse_traders(p)["generalist"] == ["Backpains", "Prime Time"]
+
+
+def test_parse_traders_empty_trader(tmp_path: Path) -> None:
+    p = tmp_path / "Traders.tres"
+    p.write_text(TRADERS_TRES, encoding="utf-8")
+    assert parse_traders(p)["doctor"] == []
+
+
+def test_parse_traders_skips_ext_resource_arrays(tmp_path: Path) -> None:
+    p = tmp_path / "Traders.tres"
+    p.write_text(TRADERS_TRES, encoding="utf-8")
+    result = parse_traders(p)
+    assert "taskNotes" not in result
+
+
+def test_parse_traders_empty_resource_block(tmp_path: Path) -> None:
+    content = '[gd_resource type="Resource" format=3]\n[resource]\n'
+    p = tmp_path / "Traders.tres"
+    p.write_text(content, encoding="utf-8")
+    assert parse_traders(p) == {}
 
 
 def test_parse_storage_label_tent(tmp_path: Path) -> None:

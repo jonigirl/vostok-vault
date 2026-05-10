@@ -20,8 +20,22 @@ GAME_DIR = REPO_ROOT / "data" / "game_full"
 GAME_ITEMS_DIR = GAME_DIR / "Items"
 ICONS_OUT = REPO_ROOT / "data" / "icons"
 OUT_FILE = REPO_ROOT / "data" / "items.json"
+PROJECT_GODOT = GAME_DIR / "project.godot"
 
 RTV_GAME_SUBPATH = Path("steamapps") / "common" / "Road to Vostok" / "RTV.pck"
+
+
+def _read_game_version() -> str | None:
+    """Read config/version from project.godot in the extracted game files."""
+    if not PROJECT_GODOT.exists():
+        return None
+    for line in PROJECT_GODOT.read_text(
+        encoding="utf-8", errors="replace"
+    ).splitlines():
+        m = re.match(r'^config/version\s*=\s*"([^"]+)"', line.strip())
+        if m:
+            return m.group(1)
+    return None
 
 
 def _steam_library_roots() -> list[Path]:
@@ -338,9 +352,16 @@ def build_db() -> None:
 
     items.sort(key=lambda i: (i["category"], i["display_name"]))
 
+    game_version = _read_game_version()
+    if game_version:
+        print(f"Game version detected: {game_version}")
+    else:
+        print("WARNING: could not detect game version from project.godot")
+
     output = {
         "generated": datetime.now(timezone.utc).isoformat(),
-        "source": "game files (RTV.pck v4.6.2, GDRETools v2.5.0-beta.5 full recovery)",
+        "source": "game files (RTV.pck, GDRETools full recovery)",
+        "game_version": game_version,
         "total": len(items),
         "items": items,
     }
