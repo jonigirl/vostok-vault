@@ -953,15 +953,29 @@ class SaveDetailPanel(ctk.CTkFrame):
             else:
                 for task_name in all_tasks:
                     is_done = task_name in done_set
-                    symbol = "\u2713" if is_done else "\u25cb"
-                    color = ("gray30", "gray80") if is_done else ("gray60", "gray50")
+                    dot_color = (
+                        ("#27AE60", "#2ECC71") if is_done else ("gray55", "gray55")
+                    )
+                    task_color = (
+                        ("gray30", "gray80") if is_done else ("gray60", "gray50")
+                    )
+                    row = ctk.CTkFrame(content_frame, fg_color="transparent")
+                    row.pack(fill="x", padx=20, pady=(2, 2))
                     ctk.CTkLabel(
-                        content_frame,
-                        text=f"{symbol}  {task_name}",
+                        row,
+                        text="\u25cf",
                         font=ctk.CTkFont(family=font, size=13),
-                        text_color=color,
+                        text_color=dot_color,
+                        width=18,
                         anchor="w",
-                    ).pack(fill="x", padx=20, pady=(2, 2))
+                    ).grid(row=0, column=0, sticky="w")
+                    ctk.CTkLabel(
+                        row,
+                        text=task_name,
+                        font=ctk.CTkFont(family=font, size=13),
+                        text_color=task_color,
+                        anchor="w",
+                    ).grid(row=0, column=1, sticky="w")
             if is_expanded[0]:
                 content_frame.pack(fill="x", padx=4, pady=(0, 4))
             header_btn.configure(

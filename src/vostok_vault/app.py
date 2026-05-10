@@ -429,7 +429,7 @@ class VostokVaultApp:
 
     def _on_repair_detected(self, detection: dict, items_db: list[dict]) -> None:
         if detection["total_slots"] == 0:
-            self._set_status("Nothing to repair — no orphaned items found.")
+            self._set_status("No orphaned items found.")
             self._repair_btn.configure(state="normal")
             return
 
@@ -461,9 +461,7 @@ class VostokVaultApp:
             self._set_status("Repaired backup created.")
             self._load_backups()
         else:
-            self._set_status(
-                "Repair failed — original backup unchanged. See log for details."
-            )
+            self._set_status("Repair failed — original unchanged. See log.")
 
     def _on_open_settings(self) -> None:
         SettingsDialog(self.root)
