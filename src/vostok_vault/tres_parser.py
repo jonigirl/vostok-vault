@@ -161,9 +161,6 @@ def parse_storage(path: Path) -> list[dict]:
     storage_label = path.stem
     sub_map = _parse_all_sub_resources(lines)
 
-    def _sub_refs(val: str) -> list[str]:
-        return re.findall(r'SubResource\("([^"]+)"\)', val)
-
     results = []
     seen_slot_ids: set[str] = set()
 
@@ -174,7 +171,7 @@ def parse_storage(path: Path) -> list[dict]:
         if not name_val or not storage_val:
             continue
         container_name = name_val.strip('"')
-        for ref in _sub_refs(storage_val):
+        for ref in re.findall(r'SubResource\("([^"]+)"\)', storage_val):
             if ref in seen_slot_ids:
                 continue
             item = _resolve_item(sub_map.get(ref, {}), ext_map)

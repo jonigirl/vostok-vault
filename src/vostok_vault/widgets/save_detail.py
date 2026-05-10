@@ -5,6 +5,7 @@ from pathlib import Path
 
 import customtkinter as ctk
 
+from ..backup import format_backup_date
 from ..constants import DIFFICULTY_NAMES, SEASON_NAMES
 from ..fonts import get_font
 from ..mcm_parser import parse_mcm_configs
@@ -17,7 +18,6 @@ from ..tres_parser import (
     parse_validator,
     parse_world,
 )
-from .backup_list import _format_backup_date
 from .inventory_view import (
     _ITEM_CATEGORY,
     _ITEM_RARITY,
@@ -442,7 +442,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             ).grid(row=row, column=0, columnspan=2, sticky="w", padx=12, pady=(12, 2))
 
         row = 0
-        info_row("Created", _format_backup_date(data.get("created", "—")), row)
+        info_row("Created", format_backup_date(data.get("created", "—")), row)
         row += 1
 
         section_heading("WORLD", row)

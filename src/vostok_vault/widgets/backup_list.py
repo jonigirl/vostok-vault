@@ -1,25 +1,10 @@
-from datetime import date, datetime
 from typing import Callable
 
 import customtkinter as ctk
 
+from ..backup import format_backup_date
 from ..constants import SEASON_NAMES
 from ..fonts import get_font
-
-
-def _format_backup_date(iso: str) -> str:
-    if not iso:
-        return ""
-    try:
-        dt = datetime.fromisoformat(iso)
-        today = date.today()
-        if dt.date() == today:
-            return f"Today  {dt.strftime('%H:%M')}"
-        if dt.date().toordinal() == today.toordinal() - 1:
-            return f"Yesterday  {dt.strftime('%H:%M')}"
-        return f"{dt.day} {dt.strftime('%b')}  {dt.strftime('%H:%M')}"
-    except (ValueError, TypeError):
-        return iso[:16].replace("T", " ")
 
 
 class BackupCard(ctk.CTkFrame):
@@ -79,7 +64,7 @@ class BackupCard(ctk.CTkFrame):
 
         ctk.CTkLabel(
             self,
-            text=_format_backup_date(created),
+            text=format_backup_date(created),
             font=ctk.CTkFont(family=font, size=13),
             anchor="w",
             text_color=("gray65", "gray65"),
@@ -214,7 +199,7 @@ class BackupListPanel(ctk.CTkFrame):
             visible = (
                 not text
                 or text in (d.get("tag") or "").lower()
-                or text in _format_backup_date(d.get("created") or "").lower()
+                or text in format_backup_date(d.get("created") or "").lower()
             )
             if visible:
                 card.pack(fill="x", padx=4, pady=4)

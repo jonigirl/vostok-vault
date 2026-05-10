@@ -3,7 +3,7 @@ import logging
 import re
 import shutil
 import threading
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 from .mods import get_mod_names, parse_mod_config
@@ -13,6 +13,21 @@ from .tres_parser import parse_character, parse_storage, parse_world
 log = logging.getLogger(__name__)
 
 _lock = threading.RLock()
+
+
+def format_backup_date(iso: str) -> str:
+    if not iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(iso)
+        today = date.today()
+        if dt.date() == today:
+            return f"Today  {dt.strftime('%H:%M')}"
+        if dt.date().toordinal() == today.toordinal() - 1:
+            return f"Yesterday  {dt.strftime('%H:%M')}"
+        return f"{dt.day} {dt.strftime('%b')}  {dt.strftime('%H:%M')}"
+    except (ValueError, TypeError):
+        return iso[:16].replace("T", " ")
 
 
 def sanitise_tag(tag: str) -> str:
