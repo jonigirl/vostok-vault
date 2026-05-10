@@ -10,6 +10,7 @@ from ..fonts import get_font
 from ..mcm_parser import parse_mcm_configs
 from ..paths import SHELTER_NAMES
 from ..tres_parser import (
+    load_trader_task_catalog,
     parse_character,
     parse_storage,
     parse_traders,
@@ -883,8 +884,12 @@ class SaveDetailPanel(ctk.CTkFrame):
             ).pack(pady=20)
             return
 
-        trader_data = self._cached_traders
-        if not trader_data:
+        completed: dict[str, list[str]] = self._cached_traders
+        catalog: dict[str, list[str]] = load_trader_task_catalog()
+
+        # Fall back to completed keys if catalog not available
+        all_trader_keys = list(catalog.keys()) if catalog else list(completed.keys())
+        if not all_trader_keys:
             ctk.CTkLabel(
                 f,
                 text="No trader data found.",
@@ -917,11 +922,13 @@ class SaveDetailPanel(ctk.CTkFrame):
 
             return _toggle
 
-        for trader_key, tasks in trader_data.items():
+        for trader_key in all_trader_keys:
+            done_set = set(completed.get(trader_key, []))
+            all_tasks = catalog.get(trader_key, sorted(done_set))
+            done_count = sum(1 for t in all_tasks if t in done_set)
+            total_count = len(all_tasks)
             header_text = trader_key.replace("_", " ").title()
-            count_text = (
-                f"  ({len(tasks)} completed)" if tasks else "  (no tasks completed)"
-            )
+            count_text = f"  ({done_count} / {total_count})"
             is_expanded = [self._traders_expanded.get(trader_key, False)]
             self._traders_expanded[trader_key] = is_expanded[0]
             expand_char = "\u25bc" if is_expanded[0] else "\u25b6"
@@ -939,20 +946,24 @@ class SaveDetailPanel(ctk.CTkFrame):
             )
             header_btn.pack(fill="x", padx=4, pady=(8, 0))
             content_frame = ctk.CTkFrame(section, fg_color="transparent")
-            if not tasks:
+            if not all_tasks:
                 ctk.CTkLabel(
                     content_frame,
-                    text="No tasks completed yet",
+                    text="No tasks available",
                     font=ctk.CTkFont(family=font, size=13),
                     text_color=("gray70", "gray70"),
                     anchor="w",
                 ).pack(fill="x", padx=20, pady=(4, 4))
             else:
-                for task_name in tasks:
+                for task_name in all_tasks:
+                    is_done = task_name in done_set
+                    symbol = "\u2713" if is_done else "\u25cb"
+                    color = ("gray30", "gray80") if is_done else ("gray60", "gray50")
                     ctk.CTkLabel(
                         content_frame,
-                        text=f"\u2713  {task_name}",
+                        text=f"{symbol}  {task_name}",
                         font=ctk.CTkFont(family=font, size=13),
+                        text_color=color,
                         anchor="w",
                     ).pack(fill="x", padx=20, pady=(2, 2))
             if is_expanded[0]:

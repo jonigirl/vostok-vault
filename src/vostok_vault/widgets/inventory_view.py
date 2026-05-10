@@ -132,19 +132,31 @@ class InventoryTable(ctk.CTkFrame):
             ).pack(pady=10)
             return
 
-        header_row = ctk.CTkFrame(self, fg_color=("gray80", "#1A1A2E"), corner_radius=4)
-        header_row.pack(fill="x", padx=2, pady=(2, 0))
-        for col, (h, w) in enumerate(zip(headers, col_widths)):
+        # Single grid frame — header and all data rows share one geometry manager
+        # so column widths are enforced consistently across every row.
+        table = ctk.CTkFrame(self, fg_color="transparent")
+        table.pack(fill="x", padx=2, pady=(2, 0))
+        for col, w in enumerate(col_widths):
+            table.columnconfigure(col, minsize=w, weight=0)
+        # Trailing column absorbs leftover width so data columns stay left-aligned
+        table.columnconfigure(len(col_widths), weight=1)
+
+        # Header row — labels with header background colour, corner_radius=0 so
+        # adjacent cells share a contiguous background strip
+        header_bg = ("gray80", "#1A1A2E")
+        for col, h in enumerate(headers):
             ctk.CTkLabel(
-                header_row,
+                table,
                 text=h,
                 font=ctk.CTkFont(family=font, size=13, weight="bold"),
-                width=w,
+                fg_color=header_bg,
+                corner_radius=0,
                 anchor="w",
-            ).grid(row=0, column=col, padx=6, pady=5, sticky="w")
+            ).grid(row=0, column=col, padx=0, pady=0, ipadx=6, ipady=5, sticky="nsew")
 
         _ensure_rarity_loaded()
 
+        grid_row = 1
         for item in items:
             cond = f"{item['condition']}%" if item.get("condition") is not None else "—"
             item_stem = item.get("item_name", "")
@@ -152,8 +164,6 @@ class InventoryTable(ctk.CTkFrame):
             name_color = _RARITY_COLOURS.get(rarity)
             icon = _get_icon(item_stem)
             shown_name = display_name(item_stem)
-            row_frame = ctk.CTkFrame(self, fg_color="transparent")
-            row_frame.pack(fill="x", padx=2, pady=3)
 
             slot_val = item.get("slot", "")
             amt_val = (
@@ -166,11 +176,10 @@ class InventoryTable(ctk.CTkFrame):
                 else [slot_val, shown_name, cond, amt_val]
             )
 
-            for col, (val, w) in enumerate(zip(row_vals, col_widths)):
+            for col, val in enumerate(row_vals):
                 if col == item_col:
-                    cell = ctk.CTkFrame(row_frame, fg_color="transparent", width=w)
-                    cell.grid_propagate(False)
-                    cell.grid(row=0, column=col, padx=6, pady=3, sticky="w")
+                    cell = ctk.CTkFrame(table, fg_color="transparent")
+                    cell.grid(row=grid_row, column=col, padx=6, pady=3, sticky="w")
                     if rarity in _RARITY_COLOURS:
                         ctk.CTkLabel(
                             cell,
@@ -191,26 +200,22 @@ class InventoryTable(ctk.CTkFrame):
                     ctk.CTkLabel(cell, text=val, **name_kw).pack(side="left")
                 else:
                     ctk.CTkLabel(
-                        row_frame,
+                        table,
                         text=val,
                         font=ctk.CTkFont(family=font, size=14),
-                        width=w,
                         anchor="w",
-                    ).grid(row=0, column=col, padx=6, pady=4, sticky="w")
+                    ).grid(row=grid_row, column=col, padx=6, pady=4, sticky="w")
 
             for att in item.get("attachments", []):
-                att_row = ctk.CTkFrame(self, fg_color="transparent")
-                att_row.pack(fill="x", padx=2, pady=0)
+                grid_row += 1
                 if self._show_slot:
-                    ctk.CTkLabel(
-                        att_row,
-                        text="",
-                        width=col_widths[0],
-                    ).grid(row=0, column=0, padx=6)
+                    ctk.CTkLabel(table, text="").grid(row=grid_row, column=0, padx=6)
                 ctk.CTkLabel(
-                    att_row,
+                    table,
                     text=f"  ↳ {display_name(att)}",
                     font=ctk.CTkFont(family=font, size=13),
                     text_color=("gray65", "gray65"),
                     anchor="w",
-                ).grid(row=0, column=item_col, padx=6, sticky="w")
+                ).grid(row=grid_row, column=item_col, padx=6, sticky="w")
+
+            grid_row += 1

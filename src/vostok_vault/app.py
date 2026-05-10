@@ -363,7 +363,6 @@ class VostokVaultApp:
             self._watcher.start()
             if self._watcher.is_running:
                 self._watch_btn.configure(text="Auto-Backup: On")
-                self._set_status("Watcher active — monitoring save files")
             else:
                 self._set_status("Could not start watcher — save folder not found")
 
