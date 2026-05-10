@@ -858,11 +858,11 @@ class SaveDetailPanel(ctk.CTkFrame):
         completed: dict[str, list[str]] = self._cached_traders
         catalog: dict[str, dict] = load_trader_task_catalog()
 
-        # Only show traders the player has encountered in this save
+        # Only show traders the player has encountered and completed at least one task for
         if catalog:
-            all_trader_keys = [k for k in catalog.keys() if k in completed]
+            all_trader_keys = [k for k in catalog.keys() if completed.get(k)]
         else:
-            all_trader_keys = list(completed.keys())
+            all_trader_keys = [k for k, v in completed.items() if v]
         if not all_trader_keys:
             ctk.CTkLabel(
                 f,
