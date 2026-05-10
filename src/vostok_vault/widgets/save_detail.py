@@ -157,7 +157,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             text="Category:",
             font=ctk.CTkFont(family=font, size=13),
             text_color=("gray50", "gray60"),
-        ).pack(side="right", padx=(6, 0))
+        ).pack(side="left", padx=(0, 6))
         self._storage_category_var = ctk.StringVar(value="All")
         self._storage_category_menu = ctk.CTkOptionMenu(
             cat_frame,
@@ -167,7 +167,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             width=160,
             command=self._on_storage_category_change,
         )
-        self._storage_category_menu.pack(side="right")
+        self._storage_category_menu.pack(side="left")
 
         sort_frame = ctk.CTkFrame(storage_tab, fg_color="transparent")
         sort_frame.grid(row=2, column=0, sticky="ew", padx=8, pady=(0, 4))
