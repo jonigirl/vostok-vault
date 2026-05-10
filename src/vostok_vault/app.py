@@ -140,6 +140,16 @@ class VostokVaultApp:
         )
         self._open_folder_btn.pack(side="left", padx=4, pady=9)
 
+        self._repair_btn = ctk.CTkButton(
+            toolbar,
+            text="Repair",
+            width=80,
+            command=self._on_repair,
+            state="disabled",
+            **btn_opts,
+        )
+        self._repair_btn.pack(side="left", padx=4, pady=9)
+
         ctk.CTkFrame(toolbar, width=1, fg_color=("gray70", "gray40")).pack(
             side="left", fill="y", padx=(8, 8), pady=10
         )
@@ -245,6 +255,7 @@ class VostokVaultApp:
         self._selected = data
         self._right.show_backup(data)
         self._open_folder_btn.configure(state="normal" if data else "disabled")
+        self._repair_btn.configure(state="normal" if data else "disabled")
 
     def _on_open_folder(self) -> None:
         if not self._selected:
@@ -385,6 +396,71 @@ class VostokVaultApp:
             log.exception("Auto-backup failed")
             self.root.after(
                 0, lambda msg=str(exc): self._set_status(f"Auto-backup failed: {msg}")
+            )
+
+    def _on_repair(self) -> None:
+        if not self._selected:
+            return
+        self._repair_btn.configure(state="disabled")
+        self._set_status("Scanning for orphaned items…")
+
+        try:
+            items_db = json.loads(ITEMS_JSON.read_text(encoding="utf-8"))
+            if isinstance(items_db, dict):
+                items_db = items_db.get("items", [])
+        except Exception:
+            items_db = []
+
+        source_path = Path(self._selected["_path"])
+
+        def _detect() -> dict:
+            return rp.detect_orphaned_items(source_path, items_db)
+
+        def _on_done(detection: dict) -> None:
+            self.root.after(0, lambda: self._on_repair_detected(detection, items_db))
+
+        def _thread() -> None:
+            detection = _detect()
+            _on_done(detection)
+
+        threading.Thread(target=_thread, daemon=True).start()
+
+    def _on_repair_detected(self, detection: dict, items_db: list[dict]) -> None:
+        if detection["total_slots"] == 0:
+            self._set_status("Nothing to repair — no orphaned items found.")
+            self._repair_btn.configure(state="normal")
+            return
+
+        dialog = RepairConfirmDialog(self.root, detection, self._selected)
+        dialog.wait_window()
+
+        if not dialog.result:
+            self._set_status("Repair cancelled.")
+            self._repair_btn.configure(state="normal")
+            return
+
+        self._set_status("Repairing…")
+        self._repair_btn.configure(state="disabled")
+
+        source_path = Path(self._selected["_path"])
+
+        def _do_repair() -> tuple[bool, str]:
+            return rp.create_repaired_backup(source_path, items_db)
+
+        def _thread() -> None:
+            ok, reason = _do_repair()
+            self.root.after(0, lambda: self._on_repair_complete(ok, reason))
+
+        threading.Thread(target=_thread, daemon=True).start()
+
+    def _on_repair_complete(self, ok: bool, reason: str) -> None:
+        self._repair_btn.configure(state="normal")
+        if ok:
+            self._set_status("Repaired backup created.")
+            self._load_backups()
+        else:
+            self._set_status(
+                "Repair failed — original backup unchanged. See log for details."
             )
 
     def _on_open_settings(self) -> None:
