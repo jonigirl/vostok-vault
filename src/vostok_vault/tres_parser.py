@@ -1,5 +1,8 @@
+import json
 import re
 from pathlib import Path
+
+from .paths import TRADERS_CATALOG_JSON
 
 
 def _item_name_from_path(res_path: str) -> str:
@@ -369,10 +372,6 @@ def load_trader_task_catalog() -> dict[str, dict]:
 
     Returns an empty dict if the catalog file is not present.
     """
-    import json  # noqa: PLC0415
-
-    from .paths import TRADERS_CATALOG_JSON  # noqa: PLC0415
-
     if not TRADERS_CATALOG_JSON.exists():
         return {}
     with TRADERS_CATALOG_JSON.open(encoding="utf-8") as fh:

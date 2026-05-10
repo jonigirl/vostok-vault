@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .mods import get_mod_names, parse_mod_config
-from .paths import BACKUP_DIR, SAVE_DIR, TRACKED_DIRS, TRACKED_FILES
+from .paths import BACKUP_DIR, SAVE_DIR, SHELTER_NAMES, TRACKED_DIRS, TRACKED_FILES
 from .tres_parser import parse_character, parse_storage, parse_world
 
 log = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ def _create_backup_locked(tag: str = "manual") -> dict | None:
 
     char_items = len(parse_character(dest / "Character.tres"))
     storage_items = sum(
-        len(parse_storage(dest / f)) for f in ("Cabin.tres", "Tent.tres")
+        len(parse_storage(dest / f"{name}.tres")) for name in SHELTER_NAMES
     )
 
     manifest = {

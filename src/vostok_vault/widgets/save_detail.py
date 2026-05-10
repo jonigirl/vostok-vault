@@ -286,14 +286,6 @@ class SaveDetailPanel(ctk.CTkFrame):
         if self._current:
             self._populate_storage(self._current)
 
-    def _on_storage_sort_toggle(self) -> None:
-        self._storage_sort_reverse = not self._storage_sort_reverse
-        self._storage_sort_dir_btn.configure(
-            text="\u2193 Desc" if self._storage_sort_reverse else "\u2191 Asc"
-        )
-        if self._current:
-            self._populate_storage(self._current)
-
     def _on_char_collapse_all(self) -> None:
         collapsing = self._char_collapse_btn.cget("text") == "\u229f Collapse All"
         for k in self._char_expanded:
