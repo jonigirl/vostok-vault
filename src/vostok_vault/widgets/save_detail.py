@@ -1,4 +1,5 @@
 import logging
+import threading
 import time
 from pathlib import Path
 
@@ -56,26 +57,6 @@ _MOD_DISPLAY_NAMES: dict[str, str] = {
 }
 
 
-def _format_created(iso: str) -> str:
-    """Return a friendlier created date: 'Today 10:44', 'Yesterday 10:44', or 'May 8  10:44'."""
-    import datetime
-
-    if len(iso) < 16:
-        return iso
-    try:
-        dt = datetime.datetime.fromisoformat(iso[:16])
-        today = datetime.date.today()
-        delta = today - dt.date()
-        time_part = dt.strftime("%H:%M")
-        if delta.days == 0:
-            return f"Today  {time_part}"
-        if delta.days == 1:
-            return f"Yesterday  {time_part}"
-        return f"{dt.day} {dt.strftime('%b')}  {time_part}"
-    except ValueError:
-        return iso[:16].replace("T", " ")
-
-
 def _format_weather_time(secs: float) -> str:
     mins = int(secs / 60)
     if mins < 60:
@@ -90,10 +71,20 @@ class SaveDetailPanel(ctk.CTkFrame):
         self._storage_expanded: dict[str, bool] = {}
         self._char_expanded: dict[str, bool] = {}
         self._mcm_expanded: dict[str, bool] = {}
+        self._traders_expanded: dict[str, bool] = {}
         self._storage_sort_key: str = "Name"
         self._storage_sort_reverse: bool = False
         self._storage_category_var: ctk.StringVar | None = None
         self._storage_category_menu: ctk.CTkOptionMenu | None = None
+        self._cached_path: str = ""
+        self._cached_validator: dict = {}
+        self._cached_world: dict = {}
+        self._cached_char: list = []
+        self._cached_cabin: list = []
+        self._cached_tent: list = []
+        self._cached_traders: dict = {}
+        self._cached_mcm: dict = {}
+        self._tabs_populated: set[str] = set()
         self._build()
 
     def _build(self) -> None:
@@ -195,6 +186,8 @@ class SaveDetailPanel(ctk.CTkFrame):
         self._mods_scroll = ctk.CTkScrollableFrame(self._tabs.tab("Mods"))
         self._mods_scroll.grid(row=0, column=0, sticky="nsew")
 
+        self._tabs.configure(command=self._on_tab_changed)
+
         self._show_placeholder()
 
     def _clear(self, frame: ctk.CTkScrollableFrame) -> None:
@@ -202,6 +195,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             w.destroy()
 
     def _show_placeholder(self) -> None:
+        self._tabs_populated.clear()
         font = get_font()
         for frame in (
             self._overview_scroll,
@@ -219,11 +213,11 @@ class SaveDetailPanel(ctk.CTkFrame):
         ).pack(pady=60)
 
     def _on_storage_filter_change(self, *_args) -> None:
-        if self._current:
+        if self._current and self._cached_path:
             self._populate_storage(self._current)
 
     def _on_storage_category_change(self, _value: str) -> None:
-        if self._current:
+        if self._current and self._cached_path:
             self._populate_storage(self._current)
 
     def _on_storage_sort_key_change(self, value: str) -> None:
@@ -239,6 +233,13 @@ class SaveDetailPanel(ctk.CTkFrame):
         if self._current:
             self._populate_storage(self._current)
 
+    def _on_tab_changed(self) -> None:
+        if not self._current or not self._cached_path:
+            return
+        tab = self._tabs.get()
+        if tab not in self._tabs_populated:
+            self._populate_tab(tab, self._current)
+
     def show_backup(self, data: dict | None) -> None:
         self._current = data
         if not data:
@@ -249,26 +250,71 @@ class SaveDetailPanel(ctk.CTkFrame):
             self._storage_category_menu.configure(values=["All"] + cats)
             if self._storage_category_var.get() not in (["All"] + cats):
                 self._storage_category_var.set("All")
+        self._show_loading()
+        threading.Thread(target=self._parse_backup, args=(data,), daemon=True).start()
+
+    def _show_loading(self) -> None:
+        font = get_font()
+        self._tabs_populated.clear()
+        for frame in (
+            self._overview_scroll,
+            self._char_scroll,
+            self._storage_scroll,
+            self._traders_scroll,
+            self._mods_scroll,
+        ):
+            self._clear(frame)
+            ctk.CTkLabel(
+                frame,
+                text="Loading\u2026",
+                font=ctk.CTkFont(family=font, size=14),
+                text_color=("gray70", "gray70"),
+            ).pack(pady=60)
+
+    def _parse_backup(self, data: dict) -> None:
+        backup_path = Path(data.get("_path", ""))
         t0 = time.perf_counter()
-        self._populate_overview(data)
+        validator = parse_validator(backup_path / "Validator.tres")
+        world = parse_world(backup_path / "World.tres")
+        char_items = parse_character(backup_path / "Character.tres")
+        cabin_items = parse_storage(backup_path / "Cabin.tres")
+        tent_items = parse_storage(backup_path / "Tent.tres")
+        traders = parse_traders(backup_path / "Traders.tres")
+        mcm = parse_mcm_configs(backup_path / "MCM")
         t1 = time.perf_counter()
-        self._populate_character(data)
-        t2 = time.perf_counter()
-        self._populate_storage(data)
-        t3 = time.perf_counter()
-        self._populate_traders(data)
-        t4 = time.perf_counter()
-        self._populate_mods(data)
-        t5 = time.perf_counter()
-        log.debug(
-            "show_backup timing — overview: %.3fs  character: %.3fs  storage: %.3fs  traders: %.3fs  mods: %.3fs  total: %.3fs",
-            t1 - t0,
-            t2 - t1,
-            t3 - t2,
-            t4 - t3,
-            t5 - t4,
-            t5 - t0,
-        )
+        log.debug("_parse_backup: %.3fs", t1 - t0)
+        self._cached_path = str(backup_path)
+        self._cached_validator = validator
+        self._cached_world = world
+        self._cached_char = char_items
+        self._cached_cabin = cabin_items
+        self._cached_tent = tent_items
+        self._cached_traders = traders
+        self._cached_mcm = mcm
+        self.after(0, lambda: self._render_parsed(data))
+
+    def _render_parsed(self, data: dict) -> None:
+        if self._current is not data:
+            return
+        active_tab = self._tabs.get()
+        self._populate_tab(active_tab, data)
+
+    def _populate_tab(self, tab: str, data: dict) -> None:
+        t0 = time.perf_counter()
+        if tab == "Overview":
+            self._populate_overview(data)
+        elif tab == "Character":
+            self._populate_character(data)
+        elif tab == "Storage":
+            self._populate_storage(data)
+        elif tab == "Traders":
+            self._populate_traders(data)
+        elif tab == "Mods":
+            self._populate_mods(data)
+        else:
+            return
+        self._tabs_populated.add(tab)
+        log.debug("_populate_tab %s: %.3fs", tab, time.perf_counter() - t0)
 
     def _populate_overview(self, data: dict) -> None:
         self._clear(self._overview_scroll)
@@ -300,7 +346,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             ).grid(row=row, column=0, columnspan=2, sticky="w", padx=12, pady=(12, 2))
 
         row = 0
-        info_row("Created", _format_created(data.get("created", "—")), row)
+        info_row("Created", _format_backup_date(data.get("created", "—")), row)
         row += 1
 
         section_heading("WORLD", row)
@@ -330,16 +376,12 @@ class SaveDetailPanel(ctk.CTkFrame):
             ).grid(row=row, column=0, columnspan=2, sticky="w", padx=12, pady=(0, 4))
             row += 1
 
-        backup_path = Path(data.get("_path", ""))
-        _tp0 = time.perf_counter()
-        validator = parse_validator(backup_path / "Validator.tres")
-        _tp1 = time.perf_counter()
+        validator = self._cached_validator
         if validator["player_id"]:
             info_row("Player ID", validator["player_id"], row)
             row += 1
 
-        world = parse_world(backup_path / "World.tres")
-        _tp2 = time.perf_counter()
+        world = self._cached_world
         if world["shelters"] is not None:
             info_row("Shelters", str(world["shelters"]), row)
             row += 1
@@ -347,19 +389,8 @@ class SaveDetailPanel(ctk.CTkFrame):
             info_row("Weather in", _format_weather_time(world["weather_time"]), row)
             row += 1
 
-        char_items_parsed = parse_character(backup_path / "Character.tres")
-        _tp3 = time.perf_counter()
-        storage_items_parsed = parse_storage(
-            backup_path / "Cabin.tres"
-        ) + parse_storage(backup_path / "Tent.tres")
-        _tp4 = time.perf_counter()
-        log.debug(
-            "_populate_overview parse timing — validator: %.3fs  world: %.3fs  character: %.3fs  storage: %.3fs",
-            _tp1 - _tp0,
-            _tp2 - _tp1,
-            _tp3 - _tp2,
-            _tp4 - _tp3,
-        )
+        char_items_parsed = self._cached_char
+        storage_items_parsed = self._cached_cabin + self._cached_tent
 
         char_weight = sum(
             item_weight(i["item_name"]) for i in char_items_parsed if i.get("item_name")
@@ -436,10 +467,8 @@ class SaveDetailPanel(ctk.CTkFrame):
         font = get_font()
         f = self._char_scroll
 
-        backup_path = Path(data.get("_path", ""))
-        char_file = backup_path / "Character.tres"
-
-        if not char_file.exists():
+        items = self._cached_char
+        if not (Path(data.get("_path", "")) / "Character.tres").exists():
             ctk.CTkLabel(
                 f,
                 text="[missing] — Character.tres not found in this backup.",
@@ -447,8 +476,6 @@ class SaveDetailPanel(ctk.CTkFrame):
                 text_color=("gray70", "gray70"),
             ).pack(pady=20)
             return
-
-        items = parse_character(char_file)
 
         if not items:
             ctk.CTkLabel(
@@ -556,6 +583,8 @@ class SaveDetailPanel(ctk.CTkFrame):
         font = get_font()
         f = self._storage_scroll
         backup_path = Path(data.get("_path", ""))
+        if self._cached_path != str(backup_path):
+            return
         filter_text = self._storage_filter_var.get().lower().strip()
         selected_cat = (
             self._storage_category_var.get() if self._storage_category_var else "All"
@@ -595,9 +624,9 @@ class SaveDetailPanel(ctk.CTkFrame):
             storage_path = backup_path / filename
             label = filename.replace(".tres", "")
 
-            all_items: list[dict] = []
-            if storage_path.exists():
-                all_items = parse_storage(storage_path)
+            all_items: list[dict] = (
+                self._cached_cabin if filename == "Cabin.tres" else self._cached_tent
+            )
 
             def _matches(i: dict) -> bool:
                 if (
@@ -709,7 +738,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             ).pack(pady=20)
             return
 
-        trader_data = parse_traders(traders_path)
+        trader_data = self._cached_traders
         if not trader_data:
             ctk.CTkLabel(
                 f,
@@ -729,16 +758,32 @@ class SaveDetailPanel(ctk.CTkFrame):
             justify="left",
         ).pack(fill="x", padx=8, pady=(8, 4))
 
+        def make_traders_toggle(btn, frame, flag, key, header, count):
+            def _toggle():
+                if flag[0]:
+                    frame.pack_forget()
+                    btn.configure(text=f"\u25b6  {header}{count}")
+                    flag[0] = False
+                else:
+                    frame.pack(fill="x", padx=4, pady=(0, 4))
+                    btn.configure(text=f"\u25bc  {header}{count}")
+                    flag[0] = True
+                self._traders_expanded[key] = flag[0]
+
+            return _toggle
+
         for trader_key, items in trader_data.items():
             header_text = trader_key.replace("_", " ").title()
             count_text = (
                 f"  ({len(items)} purchased)" if items else "  (none purchased)"
             )
+            is_expanded = [self._traders_expanded.get(trader_key, True)]
+            expand_char = "\u25bc" if is_expanded[0] else "\u25b6"
             section = ctk.CTkFrame(f, fg_color="transparent")
             section.pack(fill="x", padx=0, pady=0)
             header_btn = ctk.CTkButton(
                 section,
-                text=f"\u25bc  {header_text}{count_text}",
+                text=f"{expand_char}  {header_text}{count_text}",
                 fg_color=("gray85", "#2A2A40"),
                 hover_color=("gray78", "#32324E"),
                 text_color=("gray10", "gray90"),
@@ -764,25 +809,17 @@ class SaveDetailPanel(ctk.CTkFrame):
                         font=ctk.CTkFont(family=font, size=13),
                         anchor="w",
                     ).pack(fill="x", padx=20, pady=(2, 2))
-            content_frame.pack(fill="x", padx=4, pady=(0, 4))
-
-            def _make_toggle(btn, frame, header, count):
-                expanded = [True]
-
-                def _toggle():
-                    if expanded[0]:
-                        frame.pack_forget()
-                        btn.configure(text=f"\u25b6  {header}{count}")
-                        expanded[0] = False
-                    else:
-                        frame.pack(fill="x", padx=4, pady=(0, 4))
-                        btn.configure(text=f"\u25bc  {header}{count}")
-                        expanded[0] = True
-
-                return _toggle
-
+            if is_expanded[0]:
+                content_frame.pack(fill="x", padx=4, pady=(0, 4))
             header_btn.configure(
-                command=_make_toggle(header_btn, content_frame, header_text, count_text)
+                command=make_traders_toggle(
+                    header_btn,
+                    content_frame,
+                    is_expanded,
+                    trader_key,
+                    header_text,
+                    count_text,
+                )
             )
 
     def _populate_mods(self, data: dict) -> None:
@@ -833,7 +870,7 @@ class SaveDetailPanel(ctk.CTkFrame):
             enabled = mod.get("enabled", False)
             dot_color = ("#27AE60", "#2ECC71") if enabled else ("gray55", "gray55")
             mod_id = mod.get("id", "?")
-            name = _MOD_DISPLAY_NAMES.get(mod_id) or mod.get("name", mod_id)
+            name = mod.get("name") or _MOD_DISPLAY_NAMES.get(mod_id) or mod_id
             version = mod.get("version", "?")
             for col, (val, w) in enumerate(zip(["●", name, version], col_widths)):
                 kwargs: dict = {}
@@ -851,7 +888,7 @@ class SaveDetailPanel(ctk.CTkFrame):
         backup_path = data.get("_path", "")
         if not backup_path:
             return
-        mcm_data = parse_mcm_configs(Path(backup_path) / "MCM")
+        mcm_data = self._cached_mcm
         if not mcm_data:
             return
 
