@@ -1,11 +1,10 @@
 import logging
+import time
 from pathlib import Path
 
 import customtkinter as ctk
 
 from ..constants import DIFFICULTY_NAMES, SEASON_NAMES
-
-log = logging.getLogger(__name__)
 from ..fonts import get_font
 from ..mcm_parser import parse_mcm_configs
 from ..tres_parser import parse_character, parse_storage, parse_validator, parse_world
@@ -16,6 +15,8 @@ from .inventory_view import (
     item_weight,
     rarity_counts,
 )
+
+log = logging.getLogger(__name__)
 
 _SLOT_GROUP: dict[str, str] = {
     "Head": "Armour",

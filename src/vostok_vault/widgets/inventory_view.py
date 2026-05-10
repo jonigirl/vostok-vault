@@ -4,9 +4,9 @@ import logging
 import customtkinter as ctk
 
 from ..fonts import get_font
+from ..paths import ICONS_DIR, ITEMS_JSON
 
 log = logging.getLogger(__name__)
-from ..paths import ICONS_DIR, ITEMS_JSON
 
 _RARITY_COLOURS: dict[str, tuple[str, str]] = {
     "rare": ("#2471A3", "#5DADE2"),
