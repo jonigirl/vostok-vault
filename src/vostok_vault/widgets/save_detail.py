@@ -15,6 +15,7 @@ from ..tres_parser import (
     parse_validator,
     parse_world,
 )
+from .backup_list import _format_backup_date
 from .inventory_view import (
     _ITEM_CATEGORY,
     _ITEM_RARITY,
