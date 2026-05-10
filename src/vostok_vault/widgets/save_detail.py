@@ -6,7 +6,7 @@ from ..constants import DIFFICULTY_NAMES, SEASON_NAMES
 from ..fonts import get_font
 from ..mcm_parser import parse_mcm_configs
 from ..tres_parser import parse_character, parse_storage, parse_validator, parse_world
-from .inventory_view import InventoryTable, display_name, item_weight
+from .inventory_view import InventoryTable, display_name, item_weight, rarity_counts
 
 _SLOT_GROUP: dict[str, str] = {
     "Head": "Armour",
