@@ -7,7 +7,7 @@ from ..constants import SEASON_NAMES
 from ..fonts import get_font
 
 
-def _format_card_date(iso: str) -> str:
+def _format_backup_date(iso: str) -> str:
     if not iso:
         return ""
     try:
@@ -79,7 +79,7 @@ class BackupCard(ctk.CTkFrame):
 
         ctk.CTkLabel(
             self,
-            text=_format_card_date(created),
+            text=_format_backup_date(created),
             font=ctk.CTkFont(family=font, size=13),
             anchor="w",
             text_color=("gray65", "gray65"),
@@ -214,7 +214,7 @@ class BackupListPanel(ctk.CTkFrame):
             visible = (
                 not text
                 or text in (d.get("tag") or "").lower()
-                or text in _format_card_date(d.get("created") or "").lower()
+                or text in _format_backup_date(d.get("created") or "").lower()
             )
             if visible:
                 card.pack(fill="x", padx=4, pady=4)

@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 _lock = threading.RLock()
 
 
-def _sanitise_tag(tag: str) -> str:
+def sanitise_tag(tag: str) -> str:
     clean = re.sub(r"[^a-zA-Z0-9_\s-]", "", tag).strip()
     return clean.replace(" ", "_")[:50] or "backup"
 
@@ -51,7 +51,7 @@ def _create_backup_locked(tag: str = "manual") -> dict | None:
     _now = datetime.now()
     ts = _now.strftime("%Y%m%d_%H%M%S")
     created_iso = _now.isoformat(timespec="seconds")
-    folder_name = f"{ts}_{_sanitise_tag(tag)}"
+    folder_name = f"{ts}_{sanitise_tag(tag)}"
     dest = BACKUP_DIR / folder_name
     dest.mkdir(parents=True, exist_ok=True)
 
@@ -125,9 +125,13 @@ def restore_backup(backup_path: Path) -> bool:
                 src = backup_path / dname
                 if src.exists() and src.is_dir():
                     dest_dir = SAVE_DIR / dname
+                    dest_dir_tmp = dest_dir.parent / (dest_dir.name + "._tmp")
+                    if dest_dir_tmp.exists():
+                        shutil.rmtree(dest_dir_tmp)
+                    shutil.copytree(src, dest_dir_tmp)
                     if dest_dir.exists():
                         shutil.rmtree(dest_dir)
-                    shutil.copytree(src, dest_dir)
+                    dest_dir_tmp.rename(dest_dir)
         except OSError as e:
             log.error("restore_backup failed: %s", e)
             return False

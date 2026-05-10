@@ -4,7 +4,7 @@ import webbrowser
 
 import customtkinter as ctk
 
-from ..backup import _sanitise_tag
+from ..backup import sanitise_tag
 from ..fonts import FONT_ATKINSON, FONT_OPENDYSLEXIC, get_font
 from ..logging_setup import setup_logging
 from ..paths import ITEMS_JSON, LOG_FILE
@@ -28,7 +28,7 @@ def _items_db_info() -> str:
     return ""
 
 
-class _UpdateDialog(ctk.CTkToplevel):
+class UpdateDialog(ctk.CTkToplevel):
     def __init__(self, parent, update_info: dict) -> None:
         super().__init__(parent)
         self.title(f"Update available — {update_info['version']}")
@@ -87,7 +87,7 @@ class _UpdateDialog(ctk.CTkToplevel):
         self.protocol("WM_DELETE_WINDOW", self.destroy)
 
 
-class _TagDialog(ctk.CTkToplevel):
+class TagDialog(ctk.CTkToplevel):
     def __init__(self, parent, suggestion: str) -> None:
         super().__init__(parent)
         self.title("Backup Tag")
@@ -153,7 +153,7 @@ class _TagDialog(ctk.CTkToplevel):
 
     def _update_preview(self, *_args) -> None:
         raw = self._entry_var.get()
-        sanitised = _sanitise_tag(raw)
+        sanitised = sanitise_tag(raw)
         if sanitised != raw:
             self._preview_label.configure(text=f"Will be saved as: {sanitised}")
         else:
@@ -172,7 +172,7 @@ class _TagDialog(ctk.CTkToplevel):
         return self._result
 
 
-class _SettingsDialog(ctk.CTkToplevel):
+class SettingsDialog(ctk.CTkToplevel):
     def __init__(self, parent) -> None:
         super().__init__(parent)
         self.title("Settings")

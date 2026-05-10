@@ -4,12 +4,12 @@ from pathlib import Path
 import pytest
 
 from vostok_vault.backup import (
-    _sanitise_tag,
     create_backup,
     current_save_needs_backup,
     delete_backup,
     list_backups,
     restore_backup,
+    sanitise_tag,
 )
 
 # ---------------------------------------------------------------------------
@@ -18,35 +18,35 @@ from vostok_vault.backup import (
 
 
 def test_sanitise_tag_simple() -> None:
-    assert _sanitise_tag("manual") == "manual"
+    assert sanitise_tag("manual") == "manual"
 
 
 def test_sanitise_tag_spaces_become_underscores() -> None:
-    assert _sanitise_tag("my tag") == "my_tag"
+    assert sanitise_tag("my tag") == "my_tag"
 
 
 def test_sanitise_tag_special_chars_removed() -> None:
-    assert _sanitise_tag("tag!@#$%") == "tag"
+    assert sanitise_tag("tag!@#$%") == "tag"
 
 
 def test_sanitise_tag_empty_returns_fallback() -> None:
-    assert _sanitise_tag("") == "backup"
+    assert sanitise_tag("") == "backup"
 
 
 def test_sanitise_tag_only_special_chars_returns_fallback() -> None:
-    assert _sanitise_tag("!!!") == "backup"
+    assert sanitise_tag("!!!") == "backup"
 
 
 def test_sanitise_tag_truncates_at_50() -> None:
-    assert len(_sanitise_tag("a" * 60)) == 50
+    assert len(sanitise_tag("a" * 60)) == 50
 
 
 def test_sanitise_tag_strips_leading_trailing_whitespace() -> None:
-    assert _sanitise_tag("  tag  ") == "tag"
+    assert sanitise_tag("  tag  ") == "tag"
 
 
 def test_sanitise_tag_preserves_hyphens() -> None:
-    assert _sanitise_tag("pre-restore") == "pre-restore"
+    assert sanitise_tag("pre-restore") == "pre-restore"
 
 
 # ---------------------------------------------------------------------------

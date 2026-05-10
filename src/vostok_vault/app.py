@@ -24,7 +24,7 @@ from .paths import SAVE_DIR
 from .settings import load_settings, save_settings
 from .watcher import SaveWatcher
 from .widgets.backup_list import BackupListPanel
-from .widgets.dialogs import _SettingsDialog, _TagDialog, _UpdateDialog
+from .widgets.dialogs import SettingsDialog, TagDialog, UpdateDialog
 from .widgets.save_detail import SaveDetailPanel
 
 log = logging.getLogger(__name__)
@@ -78,6 +78,7 @@ class VostokVaultApp:
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self._selected: dict | None = None
+        self._update_info: dict | None = None
         self._watcher = SaveWatcher(
             self._on_auto_backup, on_dir_lost=self._on_save_dir_lost
         )
@@ -85,7 +86,12 @@ class VostokVaultApp:
         self._build_ui()
         self._load_backups()
         self.root.after(200, self._check_startup)
-        self.root.after(2000, self._schedule_update_check)
+        self.root.after(
+            2000,
+            lambda: self._schedule_update_check(
+                settings.get("check_for_updates", False)
+            ),
+        )
 
     def _build_ui(self) -> None:
         self.root.grid_columnconfigure(0, weight=0, minsize=LEFT_PANEL_WIDTH)
@@ -126,8 +132,8 @@ class VostokVaultApp:
         ).pack(side="left", padx=4, pady=9)
         self._open_folder_btn = ctk.CTkButton(
             toolbar,
-            text="Open Folder",
-            width=100,
+            text="Open Backups Folder",
+            width=140,
             command=self._on_open_folder,
             state="disabled",
             **btn_opts,
@@ -194,9 +200,8 @@ class VostokVaultApp:
         )
         self._status.pack(side="left", padx=12, fill="x", expand=True)
 
-    def _schedule_update_check(self) -> None:
-        settings = load_settings()
-        if not settings.get("check_for_updates", False):
+    def _schedule_update_check(self, check_for_updates: bool) -> None:
+        if not check_for_updates:
             return
 
         def _check() -> None:
@@ -211,8 +216,8 @@ class VostokVaultApp:
         self._update_btn.pack(side="right", padx=(4, 4), pady=9)
 
     def _on_show_update(self) -> None:
-        if hasattr(self, "_update_info"):
-            _UpdateDialog(self.root, self._update_info)
+        if self._update_info is not None:
+            UpdateDialog(self.root, self._update_info)
 
     def _check_startup(self) -> None:
         settings = load_settings()
@@ -267,7 +272,7 @@ class VostokVaultApp:
         else:
             suggestion = datetime.now().strftime("backup-%Y%m%d-%H%M")
 
-        dialog = _TagDialog(self.root, suggestion)
+        dialog = TagDialog(self.root, suggestion)
         tag = dialog.get_result()
         if tag is None:
             return
@@ -315,13 +320,11 @@ class VostokVaultApp:
         if not self._selected:
             return
         current_tag = self._selected.get("tag", "")
-        dialog = _TagDialog(self.root, current_tag)
+        dialog = TagDialog(self.root, current_tag)
         new_tag = dialog.get_result()
         if not new_tag or not new_tag.strip():
             return
-        import re
-
-        sanitised = re.sub(r"[^a-zA-Z0-9_\s-]", "", new_tag.strip())[:50] or current_tag
+        sanitised = bk.sanitise_tag(new_tag.strip()) or current_tag
         manifest_path = Path(self._selected["_path"]) / "manifest.json"
         try:
             with bk._lock:
@@ -394,7 +397,7 @@ class VostokVaultApp:
             )
 
     def _on_open_settings(self) -> None:
-        _SettingsDialog(self.root)
+        SettingsDialog(self.root)
 
     def _set_status(self, msg: str) -> None:
         self._status.configure(text=msg)
