@@ -339,6 +339,7 @@ def test_create_repaired_backup_success(
     manifest = json.loads((repaired / "manifest.json").read_text(encoding="utf-8"))
     assert "repaired_from_id" in manifest
     assert manifest["repaired_from_id"] == _MINIMAL_MANIFEST["id"]
+    assert manifest.get("original_tag") == _MINIMAL_MANIFEST["tag"]
 
     source_char = (source / "Character.tres").read_text(encoding="utf-8")
     assert "mod_ext" in source_char

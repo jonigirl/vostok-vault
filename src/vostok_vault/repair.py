@@ -173,6 +173,7 @@ def create_repaired_backup(
         new_manifest = {
             "id": original_id,
             "tag": "repaired",
+            "original_tag": original_tag,
             "created": datetime.now().isoformat(timespec="seconds"),
             "game_day": world["day"],
             "game_time": world["time_str"],

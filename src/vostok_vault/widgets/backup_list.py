@@ -34,6 +34,7 @@ class BackupCard(ctk.CTkFrame):
         is_auto = tag == "auto"
         is_pre_restore = tag == "pre_restore"
         is_repaired = tag == "repaired" or tag.startswith("repaired")
+        original_tag = self._data.get("original_tag", "")
 
         display_tag = tag
         type_label: str | None = None
@@ -44,6 +45,7 @@ class BackupCard(ctk.CTkFrame):
             display_tag = "pre-restore backup"
             type_label = "(pre-restore)"
         elif is_repaired:
+            display_tag = original_tag if original_tag else tag
             type_label = "(repaired)"
 
         auto_color = ("gray55", "gray55")
