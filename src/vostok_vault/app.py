@@ -62,7 +62,8 @@ class VostokVaultApp:
         ctk.set_default_color_theme("dark-blue")
 
         self.root = ctk.CTk()
-        self.root.title(APP_TITLE)
+        self._version = updater.get_current_version()
+        self.root.title(f"{APP_TITLE} v{self._version}")
         self.root.minsize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self.root.geometry(f"{WINDOW_MIN_WIDTH}x{WINDOW_MIN_HEIGHT}")
 
@@ -197,7 +198,7 @@ class VostokVaultApp:
 
         self._status = ctk.CTkLabel(
             toolbar,
-            text="Ready",
+            text=f"Ready  ·  v{self._version}",
             font=ctk.CTkFont(family=font, size=13),
             anchor="w",
             text_color=("gray60", "gray60"),
