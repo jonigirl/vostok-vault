@@ -131,7 +131,7 @@ def create_repaired_backup(
             # file — not just those referenced by itemData. This catches nested
             # attachment/ammo references inside vanilla weapon sub_resources.
             known_names = frozenset(item["id"].replace("_", " ") for item in items_db)
-            full_ext_map = _parse_ext_resources([l.rstrip("\n") for l in lines])
+            full_ext_map = _parse_ext_resources([ln.rstrip("\n") for ln in lines])
             orphaned_ext_ids = {
                 ext_id
                 for ext_id, path in full_ext_map.items()
