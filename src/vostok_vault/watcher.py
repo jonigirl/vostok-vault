@@ -26,6 +26,15 @@ class _DebounceHandler(FileSystemEventHandler):
         if Path(event.src_path).name in TRACKED_FILES:
             self._schedule()
 
+    def on_created(self, event) -> None:
+        self.on_modified(event)
+
+    def on_moved(self, event) -> None:
+        if event.is_directory:
+            return
+        if Path(event.dest_path).name in TRACKED_FILES:
+            self._schedule()
+
     def _schedule(self) -> None:
         with self._lock:
             if self._timer is not None:

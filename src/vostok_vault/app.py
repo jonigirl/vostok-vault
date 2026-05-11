@@ -353,19 +353,14 @@ class VostokVaultApp:
         if not new_tag or not new_tag.strip():
             return
         sanitised = bk.sanitise_tag(new_tag.strip()) or current_tag
-        manifest_path = Path(self._selected["_path"]) / "manifest.json"
-        try:
-            with bk._lock:
-                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-                manifest["tag"] = sanitised
-                tmp = manifest_path.with_suffix(".json.tmp")
-                tmp.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-                tmp.replace(manifest_path)
-        except (OSError, json.JSONDecodeError):
+        if not bk.rename_backup(Path(self._selected["_path"]), sanitised):
             self._set_status("Rename failed")
             return
         self._set_status(f"Renamed to: {sanitised}")
         self._load_backups()
+        if self._selected:
+            self._selected = dict(self._selected)
+            self._selected["tag"] = sanitised
 
     def _on_delete(self) -> None:
         if not self._selected:
@@ -413,8 +408,9 @@ class VostokVaultApp:
 
     def _on_auto_backup(self) -> None:
         try:
-            bk.create_backup("auto")
-            bk.prune_auto_backups(5)
+            manifest = bk.create_backup("auto")
+            if manifest:
+                bk.prune_auto_backups(5)
             self.root.after(0, self._load_backups)
             self.root.after(0, lambda: self._set_status("Auto-backup created"))
         except Exception as exc:

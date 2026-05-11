@@ -459,3 +459,37 @@ def test_strip_multiple_slots_same_ext() -> None:
     assert "slot_mod_b" not in text
     assert "[resource]" in text
     assert "something = 1" in text
+
+
+# ---------------------------------------------------------------------------
+# create_repaired_backup — corrupt/missing manifest
+# ---------------------------------------------------------------------------
+
+
+def test_create_repaired_backup_corrupt_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "20240101_120000_manual"
+    source.mkdir(parents=True)
+    (source / "Character.tres").write_text(CHAR_TRES_MIXED, encoding="utf-8")
+    (source / "manifest.json").write_text("{ not valid json }", encoding="utf-8")
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.repair.BACKUP_DIR", backup_dir)
+
+    ok, reason = create_repaired_backup(source, FAKE_ITEMS_DB)
+    assert ok is False
+
+
+def test_create_repaired_backup_missing_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "20240101_120000_manual"
+    source.mkdir(parents=True)
+    (source / "Character.tres").write_text(CHAR_TRES_MIXED, encoding="utf-8")
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.repair.BACKUP_DIR", backup_dir)
+
+    ok, reason = create_repaired_backup(source, FAKE_ITEMS_DB)
+    assert ok is False

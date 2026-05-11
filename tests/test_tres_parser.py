@@ -165,6 +165,14 @@ def test_parse_world_time_exact_hour(tmp_path: Path) -> None:
     assert result["weather"] == "Clear"
 
 
+def test_parse_world_time_midnight(tmp_path: Path) -> None:
+    # time = 0 => 00:00 midnight
+    content = '[resource]\nday = 5\ntime = 0\nseason = 1\ndifficulty = 1\nweather = "Neutral"\n'
+    p = tmp_path / "World.tres"
+    p.write_text(content, encoding="utf-8")
+    assert parse_world(p)["time_str"] == "00:00"
+
+
 def test_parse_character_missing_file(tmp_path: Path) -> None:
     assert parse_character(tmp_path / "missing.tres") == []
 

@@ -3,7 +3,7 @@ import logging
 import re
 import shutil
 import threading
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from .mods import get_mod_names, parse_mod_config
@@ -15,11 +15,21 @@ log = logging.getLogger(__name__)
 _lock = threading.RLock()
 
 
+def _manifest_tag(backup_dir: Path) -> str:
+    try:
+        m = json.loads((backup_dir / "manifest.json").read_text(encoding="utf-8"))
+        return m.get("tag", "")
+    except Exception:
+        return ""
+
+
 def format_backup_date(iso: str) -> str:
     if not iso:
         return ""
     try:
         dt = datetime.fromisoformat(iso)
+        if dt.tzinfo is not None:
+            dt = dt.astimezone().replace(tzinfo=None)
         today = date.today()
         if dt.date() == today:
             return f"Today  {dt.strftime('%H:%M')}"
@@ -63,7 +73,7 @@ def create_backup(tag: str = "manual") -> dict | None:
 def _create_backup_locked(tag: str = "manual") -> dict | None:
     if not SAVE_DIR.exists():
         return None
-    _now = datetime.now()
+    _now = datetime.now(timezone.utc)
     ts = _now.strftime("%Y%m%d_%H%M%S")
     created_iso = _now.isoformat(timespec="seconds")
     folder_name = f"{ts}_{sanitise_tag(tag)}"
@@ -197,16 +207,30 @@ def delete_backup(backup_path: Path) -> bool:
         return True
 
 
+def rename_backup(backup_path: Path, new_tag: str) -> bool:
+    with _lock:
+        manifest_path = backup_path / "manifest.json"
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["tag"] = new_tag
+            tmp = manifest_path.with_suffix(".json.tmp")
+            tmp.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+            tmp.replace(manifest_path)
+        except (OSError, json.JSONDecodeError) as e:
+            log.error("rename_backup failed: %s", e)
+            return False
+        return True
+
+
 def prune_auto_backups(max_count: int = 5) -> None:
     with _lock:
         if not BACKUP_DIR.exists():
             return
-        # Folder names start with YYYYMMDD_HHMMSS_, so lexicographic order == chronological.
         auto_backups = sorted(
             [
                 p
                 for p in BACKUP_DIR.iterdir()
-                if p.is_dir() and p.name.endswith("_auto")
+                if p.is_dir() and _manifest_tag(p) == "auto"
             ],
             key=lambda p: p.name,
         )
@@ -222,7 +246,7 @@ def prune_pre_restore_backups(max_count: int = 3) -> None:
             [
                 p
                 for p in BACKUP_DIR.iterdir()
-                if p.is_dir() and p.name.endswith("_pre_restore")
+                if p.is_dir() and _manifest_tag(p) == "pre_restore"
             ],
             key=lambda p: p.name,
         )

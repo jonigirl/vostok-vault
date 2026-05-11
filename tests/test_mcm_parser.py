@@ -195,3 +195,41 @@ my_bool={
     settings = _parse_mcm_config(cfg)
     assert len(settings) == 1
     assert settings[0]["key"] == "my_bool"
+
+
+def test_parse_mcm_config_dropdown_section(tmp_path: Path) -> None:
+    content = """\
+[Dropdown]
+
+quality_level={
+&"name": "Quality",
+&"menu_pos": 1,
+&"value": 2,
+&"options": {"Low": 0, "Medium": 1, "High": 2}
+}
+"""
+    cfg = tmp_path / "config.ini"
+    cfg.write_text(content, encoding="utf-8")
+    settings = _parse_mcm_config(cfg)
+    assert len(settings) == 1
+    s = settings[0]
+    assert s["key"] == "quality_level"
+    assert s["type"] == "Dropdown"
+    assert s["display_value"] == "2"
+
+
+def test_parse_setting_null_menu_pos(tmp_path: Path) -> None:
+    content = """\
+[Bool]
+
+my_setting={
+&"name": "My Setting",
+&"menu_pos": null,
+&"value": true
+}
+"""
+    cfg = tmp_path / "config.ini"
+    cfg.write_text(content, encoding="utf-8")
+    settings = _parse_mcm_config(cfg)
+    assert len(settings) == 1
+    assert settings[0]["menu_pos"] == 999

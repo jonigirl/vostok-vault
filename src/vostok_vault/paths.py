@@ -2,7 +2,10 @@ import os
 import sys
 from pathlib import Path
 
-SAVE_DIR = Path(os.environ.get("APPDATA", "~")) / "Road to Vostok"
+SAVE_DIR = (
+    Path(os.environ.get("APPDATA") or (Path.home() / "AppData" / "Roaming"))
+    / "Road to Vostok"
+)
 
 
 def _bundle_root() -> Path:

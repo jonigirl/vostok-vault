@@ -112,7 +112,7 @@ def _parse_setting(key: str, section: str, raw: str) -> dict | None:
         "name": str(data.get("name", key)),
         "display_value": display_value,
         "category": str(data.get("category", "")),
-        "menu_pos": int(data.get("menu_pos", 999)),
+        "menu_pos": int(data.get("menu_pos") or 999),
         "tooltip": str(data.get("tooltip", "")),
     }
 

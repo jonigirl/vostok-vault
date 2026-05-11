@@ -1,3 +1,5 @@
+import io
+import zipfile
 from pathlib import Path
 
 from vostok_vault.mods import get_mod_names, parse_mod_config
@@ -90,4 +92,41 @@ def test_get_mod_names_empty_pass_state(tmp_path: Path) -> None:
 def test_get_mod_names_pass_state_no_vmz_paths(tmp_path: Path) -> None:
     content = "[archive_paths]\n"
     (tmp_path / "mod_pass_state.cfg").write_text(content, encoding="utf-8")
+    assert get_mod_names(tmp_path) == {}
+
+
+def _make_vmz(path: Path, mod_id: str, mod_name: str) -> None:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr(
+            "mod.txt",
+            f'[mod]\nid="{mod_id}"\nname="{mod_name}"\nversion="1.0.0"\nauthor="Tester"\n',
+        )
+    path.write_bytes(buf.getvalue())
+
+
+def test_get_mod_names_reads_vmz_archive(tmp_path: Path) -> None:
+    vmz_path = tmp_path / "doinkoink-mcm.vmz"
+    _make_vmz(vmz_path, "doinkoink-mcm", "DoinkOink MCM")
+
+    pass_state = tmp_path / "mod_pass_state.cfg"
+    pass_state.write_text(
+        f'[archive_paths]\npath0="{vmz_path}"\n',
+        encoding="utf-8",
+    )
+
+    result = get_mod_names(tmp_path)
+    assert result == {"doinkoink-mcm": "DoinkOink MCM"}
+
+
+def test_get_mod_names_vmz_without_mod_txt(tmp_path: Path) -> None:
+    vmz_path = tmp_path / "empty-mod.vmz"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("readme.txt", "nothing here")
+    vmz_path.write_bytes(buf.getvalue())
+
+    pass_state = tmp_path / "mod_pass_state.cfg"
+    pass_state.write_text(f'[archive_paths]\npath0="{vmz_path}"\n', encoding="utf-8")
+
     assert get_mod_names(tmp_path) == {}

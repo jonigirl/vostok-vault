@@ -7,10 +7,198 @@ from vostok_vault.backup import (
     create_backup,
     current_save_needs_backup,
     delete_backup,
+    format_backup_date,
     list_backups,
+    prune_auto_backups,
+    prune_pre_restore_backups,
+    rename_backup,
     restore_backup,
     sanitise_tag,
 )
+
+# ---------------------------------------------------------------------------
+# rename_backup
+# ---------------------------------------------------------------------------
+
+
+def test_rename_backup_updates_tag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", backup_dir)
+
+    d = backup_dir / "20240101_120000_manual"
+    d.mkdir()
+    (d / "manifest.json").write_text(
+        json.dumps({"id": "x", "tag": "manual"}), encoding="utf-8"
+    )
+
+    assert rename_backup(d, "checkpoint") is True
+    manifest = json.loads((d / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["tag"] == "checkpoint"
+
+
+def test_rename_backup_missing_manifest(tmp_path: Path) -> None:
+    d = tmp_path / "no_manifest"
+    d.mkdir()
+    assert rename_backup(d, "anything") is False
+
+
+def test_rename_backup_corrupt_manifest(tmp_path: Path) -> None:
+    d = tmp_path / "bad_manifest"
+    d.mkdir()
+    (d / "manifest.json").write_text("{ not json }", encoding="utf-8")
+    assert rename_backup(d, "anything") is False
+
+
+# ---------------------------------------------------------------------------
+# format_backup_date
+# ---------------------------------------------------------------------------
+
+
+def test_format_backup_date_empty() -> None:
+    assert format_backup_date("") == ""
+
+
+def test_format_backup_date_today(monkeypatch: pytest.MonkeyPatch) -> None:
+    from datetime import date
+
+    import vostok_vault.backup as bk_mod
+
+    today = date(2024, 6, 15)
+    monkeypatch.setattr(
+        bk_mod, "date", type("_FakeDate", (), {"today": staticmethod(lambda: today)})()
+    )  # type: ignore[attr-defined]
+    result = format_backup_date("2024-06-15T09:30:00")
+    assert result.startswith("Today")
+    assert "09:30" in result
+
+
+def test_format_backup_date_yesterday(monkeypatch: pytest.MonkeyPatch) -> None:
+    from datetime import date
+
+    import vostok_vault.backup as bk_mod
+
+    today = date(2024, 6, 15)
+    monkeypatch.setattr(
+        bk_mod, "date", type("_FakeDate", (), {"today": staticmethod(lambda: today)})()
+    )  # type: ignore[attr-defined]
+    result = format_backup_date("2024-06-14T22:00:00")
+    assert result.startswith("Yesterday")
+    assert "22:00" in result
+
+
+def test_format_backup_date_older_date() -> None:
+    result = format_backup_date("2023-01-05T14:30:00")
+    assert "5" in result
+    assert "Jan" in result
+    assert "14:30" in result
+
+
+def test_format_backup_date_invalid_falls_back() -> None:
+    result = format_backup_date("not-a-date")
+    assert result == "not-a-date"
+
+
+def test_format_backup_date_utc_aware_converts_to_local() -> None:
+    result = format_backup_date("2023-01-05T14:30:00+00:00")
+    assert result != ""
+
+
+# ---------------------------------------------------------------------------
+# prune_auto_backups
+# ---------------------------------------------------------------------------
+
+
+def _make_backup_dir_with_tag(backup_dir: Path, name: str, tag: str) -> None:
+    d = backup_dir / name
+    d.mkdir()
+    (d / "manifest.json").write_text(
+        json.dumps({"id": name, "tag": tag}), encoding="utf-8"
+    )
+
+
+def test_prune_auto_backups_removes_oldest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", backup_dir)
+
+    for i in range(7):
+        _make_backup_dir_with_tag(backup_dir, f"2024010{i}_120000_auto", "auto")
+
+    prune_auto_backups(max_count=5)
+
+    remaining = sorted(d.name for d in backup_dir.iterdir() if d.is_dir())
+    assert len(remaining) == 5
+    assert remaining[0] == "20240102_120000_auto"
+
+
+def test_prune_auto_backups_ignores_non_auto(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", backup_dir)
+
+    for i in range(6):
+        _make_backup_dir_with_tag(backup_dir, f"2024010{i}_120000_auto", "auto")
+    _make_backup_dir_with_tag(backup_dir, "20240107_120000_my_auto", "manual")
+
+    prune_auto_backups(max_count=5)
+
+    assert (backup_dir / "20240107_120000_my_auto").exists()
+
+
+def test_prune_auto_backups_no_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", tmp_path / "missing")
+    prune_auto_backups()
+
+
+# ---------------------------------------------------------------------------
+# prune_pre_restore_backups
+# ---------------------------------------------------------------------------
+
+
+def test_prune_pre_restore_backups_removes_oldest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", backup_dir)
+
+    for i in range(5):
+        _make_backup_dir_with_tag(
+            backup_dir, f"2024010{i}_120000_pre_restore", "pre_restore"
+        )
+
+    prune_pre_restore_backups(max_count=3)
+
+    remaining = [d for d in backup_dir.iterdir() if d.is_dir()]
+    assert len(remaining) == 3
+
+
+def test_prune_pre_restore_backups_ignores_suffix_match(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.backup.BACKUP_DIR", backup_dir)
+
+    for i in range(4):
+        _make_backup_dir_with_tag(
+            backup_dir, f"2024010{i}_120000_pre_restore", "pre_restore"
+        )
+    _make_backup_dir_with_tag(backup_dir, "20240105_120000_my_pre_restore", "manual")
+
+    prune_pre_restore_backups(max_count=3)
+
+    assert (backup_dir / "20240105_120000_my_pre_restore").exists()
+
 
 # ---------------------------------------------------------------------------
 # _sanitise_tag

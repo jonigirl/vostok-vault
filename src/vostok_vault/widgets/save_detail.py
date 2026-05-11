@@ -362,22 +362,46 @@ class SaveDetailPanel(ctk.CTkFrame):
             self._clear(frame)
             ctk.CTkLabel(
                 frame,
-                text="Loading\u2026",
+                text="Loading…",
                 font=ctk.CTkFont(family=font, size=14),
                 text_color=("gray70", "gray70"),
+            ).pack(pady=60)
+
+    def _show_parse_error(self) -> None:
+        font = get_font()
+        for frame in (
+            self._overview_scroll,
+            self._char_scroll,
+            self._storage_scroll,
+            self._traders_scroll,
+            self._mods_scroll,
+        ):
+            self._clear(frame)
+            ctk.CTkLabel(
+                frame,
+                text="Could not read this backup.\nThe files may be damaged or locked.",
+                font=ctk.CTkFont(family=font, size=13),
+                text_color=("gray60", "gray60"),
+                justify="center",
             ).pack(pady=60)
 
     def _parse_backup(self, data: dict) -> None:
         backup_path = Path(data.get("_path", ""))
         t0 = time.perf_counter()
-        validator = parse_validator(backup_path / "Validator.tres")
-        world = parse_world(backup_path / "World.tres")
-        char_items = parse_character(backup_path / "Character.tres")
-        shelters = {
-            name: parse_storage(backup_path / f"{name}.tres") for name in SHELTER_NAMES
-        }
-        traders = parse_traders(backup_path / "Traders.tres")
-        mcm = parse_mcm_configs(backup_path / "MCM")
+        try:
+            validator = parse_validator(backup_path / "Validator.tres")
+            world = parse_world(backup_path / "World.tres")
+            char_items = parse_character(backup_path / "Character.tres")
+            shelters = {
+                name: parse_storage(backup_path / f"{name}.tres")
+                for name in SHELTER_NAMES
+            }
+            traders = parse_traders(backup_path / "Traders.tres")
+            mcm = parse_mcm_configs(backup_path / "MCM")
+        except Exception:
+            log.exception("_parse_backup failed for %s", backup_path)
+            self.after(0, lambda: self._show_parse_error())
+            return
         t1 = time.perf_counter()
         log.debug("_parse_backup: %.3fs", t1 - t0)
         self._cached_path = str(backup_path)

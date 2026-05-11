@@ -20,6 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Auto-backup prune now only runs when the backup was successfully created; previously ran unconditionally even on failure
+- Backup prune functions now match by manifest `tag` field rather than folder name suffix; a user-named backup ending in `_auto` or `_pre_restore` is no longer silently deleted
+- Rename dialog now updates the in-memory selection immediately; previously subsequent dialogs showed the old tag
+- File watcher now triggers on atomic writes (temp-file + rename) as well as direct modifications, so auto-backup fires correctly when Godot uses atomic save
+- `APPDATA` fallback path now expands correctly when the env var is unset
+- Backup timestamps now stored as UTC; display converts to local time, eliminating ±1 hour drift at DST boundaries
+- `menu_pos: null` in an MCM config no longer raises `TypeError`; falls back to 999 (sort-last)
+- Save detail panel parse thread now shows an error message on failure instead of leaving all tabs frozen on "Loading…"
 - Backup tabs now prefilled in the background after parsing; GDI font handles released on close (prevents handle leak when app is open for extended periods)
 - Repair correctly strips orphaned mod attachment refs nested inside vanilla weapon blocks
 - Orphan detection now flags saves where a modded item appears only as an attachment (not in a direct inventory slot)
