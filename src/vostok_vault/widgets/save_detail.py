@@ -570,6 +570,23 @@ class SaveDetailPanel(ctk.CTkFrame):
                 text_color=("gray70", "gray70"),
                 anchor="w",
             ).grid(row=row, column=0, columnspan=2, sticky="w", padx=12)
+        row += 1
+
+        removed_items = data.get("removed_items", [])
+        if removed_items:
+            section_heading("REMOVED BY REPAIR", row)
+            row += 1
+            for item_name in removed_items:
+                ctk.CTkLabel(
+                    f,
+                    text=item_name,
+                    font=ctk.CTkFont(family=font, size=13),
+                    text_color=("#C0392B", "#E74C3C"),
+                    anchor="w",
+                ).grid(
+                    row=row, column=0, columnspan=2, sticky="w", padx=20, pady=(1, 1)
+                )
+                row += 1
 
     def _populate_character(self, data: dict) -> None:
         self._clear(self._char_scroll)

@@ -340,6 +340,8 @@ def test_create_repaired_backup_success(
     assert "repaired_from_id" in manifest
     assert manifest["repaired_from_id"] == _MINIMAL_MANIFEST["id"]
     assert manifest.get("original_tag") == _MINIMAL_MANIFEST["tag"]
+    assert isinstance(manifest.get("removed_items"), list)
+    assert len(manifest["removed_items"]) > 0
 
     source_char = (source / "Character.tres").read_text(encoding="utf-8")
     assert "mod_ext" in source_char

@@ -174,6 +174,7 @@ def create_repaired_backup(
             "id": original_id,
             "tag": "repaired",
             "original_tag": original_tag,
+            "removed_items": sorted(detection.get("orphan_names", [])),
             "created": datetime.now().isoformat(timespec="seconds"),
             "game_day": world["day"],
             "game_time": world["time_str"],
