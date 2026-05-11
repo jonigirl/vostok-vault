@@ -5,6 +5,25 @@ All notable changes to Vostok Vault will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-05-11
+
+### Added
+
+- **Save Repair** — initial implementation; detects items in character and shelter saves that belong to mods no longer present in the backup, then creates a cleaned copy of the backup with those items removed; covers items held directly in inventory slots, items stored in vanilla shelter containers, and mod items nested as attachments on vanilla weapons; repaired backups are labelled `(repaired)` in the backup list; note: custom shelter `.tres` files added by a mod (not part of the base game's tracked file list) are not included in backups and therefore cannot be repaired
+- **Status bar** — persistent bar below the toolbar shows current app status and version; notifications (save changed, repair detected) display here rather than inline with the buttons
+- Traders tab: completed tasks now shown with a green dot indicator
+
+### Changed
+
+- Version shown in title bar and startup status message
+- Status messages shortened to fit without truncation
+
+### Fixed
+
+- Backup tabs now prefilled in the background after parsing; GDI font handles released on close (prevents handle leak when app is open for extended periods)
+- Repair correctly strips orphaned mod attachment refs nested inside vanilla weapon blocks
+- Orphan detection now flags saves where a modded item appears only as an attachment (not in a direct inventory slot)
+
 ## [0.5.0] - 2026-05-11
 
 ### Added
