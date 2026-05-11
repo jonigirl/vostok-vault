@@ -59,17 +59,31 @@ def detect_orphaned_items(backup_path: Path, items_db: list[dict]) -> dict:
                     {"stem_name": stem_name, "sub_id": sub_id, "ext_id": ext_id}
                 )
 
-        if slots:
-            affected_files[file_path.name] = slots
+        # Include file if it has any orphaned ext_resources — even if they only
+        # appear as nested attachment/ammo refs with no own sub_resource slot.
+        affected_files[file_path.name] = slots
 
-    all_stem_names: list[str] = []
+    all_orphan_names: set[str] = set()
     total_slots = 0
-    for slots in affected_files.values():
+    for filename, slots in affected_files.items():
         total_slots += len(slots)
         for slot in slots:
-            all_stem_names.append(slot["stem_name"])
+            all_orphan_names.add(slot["stem_name"])
 
-    orphan_names = sorted(set(all_stem_names))
+    # Also collect names of orphaned ext_resources that only appear in nested
+    # arrays (no own sub_resource slot) so the dialog can show them.
+    for file_path in files_to_check:
+        if not file_path.exists() or file_path.name not in affected_files:
+            continue
+        lines = file_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        ext_map = _parse_ext_resources(lines)
+        slot_ext_ids = {s["ext_id"] for s in affected_files[file_path.name]}
+        for ext_id, path in ext_map.items():
+            if _is_item_path(path) and _item_name_from_path(path) not in known_names:
+                if ext_id not in slot_ext_ids:
+                    all_orphan_names.add(_item_name_from_path(path))
+
+    orphan_names = sorted(all_orphan_names)
 
     return {
         "affected_files": affected_files,
@@ -82,7 +96,7 @@ def create_repaired_backup(
     source_backup_path: Path, items_db: list[dict]
 ) -> tuple[bool, str]:
     detection = detect_orphaned_items(source_backup_path, items_db)
-    if detection["total_slots"] == 0:
+    if not detection["affected_files"]:
         return (False, "nothing_to_repair")
 
     manifest_path = source_backup_path / "manifest.json"
@@ -109,12 +123,21 @@ def create_repaired_backup(
             if not dest_file.exists():
                 continue
 
-            orphaned_ext_ids = {slot["ext_id"] for slot in file_slots}
-            orphaned_sub_ids = {slot["sub_id"] for slot in file_slots}
-
             lines = dest_file.read_text(encoding="utf-8", errors="replace").splitlines(
                 keepends=True
             )
+
+            # Build orphaned_ext_ids from ALL orphaned item ext_resources in the
+            # file — not just those referenced by itemData. This catches nested
+            # attachment/ammo references inside vanilla weapon sub_resources.
+            known_names = frozenset(item["id"].replace("_", " ") for item in items_db)
+            full_ext_map = _parse_ext_resources([l.rstrip("\n") for l in lines])
+            orphaned_ext_ids = {
+                ext_id
+                for ext_id, path in full_ext_map.items()
+                if _is_item_path(path) and _item_name_from_path(path) not in known_names
+            }
+            orphaned_sub_ids = {slot["sub_id"] for slot in file_slots}
             stripped_lines = strip_orphaned_blocks(
                 lines, orphaned_ext_ids, orphaned_sub_ids
             )

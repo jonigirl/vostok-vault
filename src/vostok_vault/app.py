@@ -429,7 +429,7 @@ class VostokVaultApp:
         threading.Thread(target=_thread, daemon=True).start()
 
     def _on_repair_detected(self, detection: dict, items_db: list[dict]) -> None:
-        if detection["total_slots"] == 0:
+        if not detection["affected_files"]:
             self._set_status("No orphaned items found.")
             self._repair_btn.configure(state="normal")
             return

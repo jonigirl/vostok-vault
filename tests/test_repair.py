@@ -276,6 +276,48 @@ def test_create_repaired_backup_nothing_to_repair(
     assert reason == "nothing_to_repair"
 
 
+def test_create_repaired_backup_cleans_nested_mod_attachment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Vanilla weapon with a modded scope in nested[] — scope ext_resource and
+    its reference in nested must be removed even though it has no own sub_resource."""
+    char_tres = """\
+[gd_resource type="Resource" script_class="CharacterSave" format=3]
+[ext_resource type="Script" path="res://Scripts/SlotData.gd" id="1"]
+[ext_resource type="Resource" path="res://Items/Weapons/MP5K/MP5K.tres" id="vanilla_ext"]
+[ext_resource type="Resource" path="res://Items/Attachments/Mod_Scope_FWE/Mod_Scope_FWE.tres" id="mod_scope"]
+[ext_resource type="Script" path="res://Scripts/CharacterSave.gd" id="script"]
+[sub_resource type="Resource" id="slot_vanilla"]
+script = ExtResource("1")
+itemData = ExtResource("vanilla_ext")
+nested = Array[ExtResource("3")]([ExtResource("mod_scope")])
+condition = 100
+amount = 15
+slot = "Primary"
+[resource]
+script = ExtResource("script")
+inventory = Array[ExtResource("1")]([SubResource("slot_vanilla")])
+"""
+    source = tmp_path / "20240101_120000_manual"
+    _write_backup(source, char_tres)
+    backup_dir = tmp_path / "backups"
+    backup_dir.mkdir()
+    monkeypatch.setattr("vostok_vault.repair.BACKUP_DIR", backup_dir)
+
+    ok, reason = create_repaired_backup(source, FAKE_ITEMS_DB)
+    assert ok is True
+
+    repaired = list(backup_dir.iterdir())[0]
+    repaired_text = (repaired / "Character.tres").read_text(encoding="utf-8")
+
+    # mod scope ext_resource line removed
+    assert "mod_scope" not in repaired_text
+    # vanilla weapon sub_resource preserved
+    assert "slot_vanilla" in repaired_text
+    # vanilla weapon still has a nested line (empty array is fine)
+    assert "nested = " in repaired_text
+
+
 def test_create_repaired_backup_success(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -331,6 +373,60 @@ def test_detect_same_ext_multiple_slots(tmp_path: Path) -> None:
     assert result["total_slots"] == 2
     assert len(result["orphan_names"]) == 1
     assert result["orphan_names"] == ["ModGun"]
+
+
+def test_strip_orphaned_nested_ext_refs_from_vanilla_weapon() -> None:
+    """1c — vanilla weapon has a modded attachment in its nested array.
+    The orphaned ExtResource should be removed from nested; vanilla weapon block kept."""
+    lines = [
+        _GD_RESOURCE,
+        _VANILLA_EXT,
+        '[ext_resource type="Resource" path="res://Items/Attachments/ModScope/ModScope.tres" id="mod_scope_ext"]\n',
+        _VANILLA_SUB_HEADER,
+        _VANILLA_SUB_BODY,
+        'nested = Array[ExtResource("3")]([ExtResource("mod_scope_ext")])\n',
+        "condition = 90\n",
+        _RESOURCE_HEADER,
+    ]
+    result = strip_orphaned_blocks(
+        lines,
+        orphaned_ext_ids={"mod_scope_ext"},
+        orphaned_sub_ids=set(),
+    )
+    text = "".join(result)
+    # orphaned attachment removed from nested array
+    assert 'ExtResource("mod_scope_ext")' not in text
+    # nested line still present with empty array
+    assert "nested = " in text
+    # vanilla weapon block preserved
+    assert _VANILLA_EXT in text
+    assert "[sub_resource" in text
+    assert _VANILLA_SUB_BODY in text
+
+
+def test_strip_orphaned_nested_mixed_keeps_vanilla_attachment() -> None:
+    """1b partial — vanilla weapon has one modded and one vanilla attachment in nested.
+    Only the modded one should be removed; vanilla attachment ref stays."""
+    lines = [
+        _GD_RESOURCE,
+        _VANILLA_EXT,
+        '[ext_resource type="Resource" path="res://Items/Attachments/EXPS/EXPS.tres" id="vanilla_scope_ext"]\n',
+        '[ext_resource type="Resource" path="res://Items/Attachments/ModScope/ModScope.tres" id="mod_scope_ext"]\n',
+        _VANILLA_SUB_HEADER,
+        _VANILLA_SUB_BODY,
+        'nested = Array[ExtResource("3")]([ExtResource("vanilla_scope_ext"), ExtResource("mod_scope_ext")])\n',
+        "condition = 90\n",
+        _RESOURCE_HEADER,
+    ]
+    result = strip_orphaned_blocks(
+        lines,
+        orphaned_ext_ids={"mod_scope_ext"},
+        orphaned_sub_ids=set(),
+    )
+    text = "".join(result)
+    assert 'ExtResource("mod_scope_ext")' not in text
+    assert 'ExtResource("vanilla_scope_ext")' in text
+    assert "[sub_resource" in text
 
 
 def test_strip_multiple_slots_same_ext() -> None:

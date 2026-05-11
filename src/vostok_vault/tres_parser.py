@@ -333,6 +333,27 @@ def load_trader_task_catalog() -> dict[str, dict]:
         return json.load(fh)
 
 
+def _filter_extresource_array_refs(value: str, orphaned_ext_ids: set[str]) -> str:
+    """Remove orphaned ExtResource refs from Array[...]([ ... ]) values."""
+    m = re.search(r"(Array\[[^\]]+\]\(\[)(.*?)(\]\))", value, re.DOTALL)
+    if not m:
+        return value
+    inner = m.group(2)
+    refs = re.findall(r'ExtResource\("([^"]+)"\)', inner)
+    kept = [f'ExtResource("{r}")' for r in refs if r not in orphaned_ext_ids]
+    return value[: m.start(2)] + ", ".join(kept) + value[m.end(2) :]
+
+
+def _rewrite_extresource_array_refs(line: str, orphaned_ext_ids: set[str]) -> str:
+    """Rewrite a line that contains an ExtResource array, removing orphaned refs."""
+    if " = " not in line or "Array[" not in line:
+        return line
+    if not any(f'ExtResource("{eid}")' in line for eid in orphaned_ext_ids):
+        return line
+    key, sep, value = line.partition(" = ")
+    return f"{key}{sep}{_filter_extresource_array_refs(value, orphaned_ext_ids)}"
+
+
 def _filter_subresource_refs(value: str, orphaned_sub_ids: set[str]) -> str:
     # Handle Array[...]([ inner ]) format
     m = re.search(r"(Array\[[^\]]+\]\(\[)(.*?)(\]\))", value, re.DOTALL)
@@ -410,6 +431,9 @@ def strip_orphaned_blocks(
 
         if in_rewrite_block and orphaned_sub_ids:
             line = _rewrite_subresource_refs(line, orphaned_sub_ids)
+
+        if in_rewrite_block and orphaned_ext_ids:
+            line = _rewrite_extresource_array_refs(line, orphaned_ext_ids)
 
         result.append(line)
 
