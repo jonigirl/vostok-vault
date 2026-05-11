@@ -101,6 +101,7 @@ class VostokVaultApp:
         self.root.grid_columnconfigure(1, weight=1)
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_rowconfigure(1, weight=0)
+        self.root.grid_rowconfigure(2, weight=0)
 
         self._left = BackupListPanel(
             self.root,
@@ -117,14 +118,14 @@ class VostokVaultApp:
 
     def _build_toolbar(self) -> None:
         font = get_font()
-        toolbar = ctk.CTkFrame(self.root, height=80, corner_radius=0)
+        toolbar = ctk.CTkFrame(self.root, height=52, corner_radius=0)
         toolbar.grid(row=1, column=0, columnspan=2, sticky="ew", padx=0, pady=0)
         toolbar.grid_propagate(False)
         toolbar.pack_propagate(False)
 
-        # ── row 0: buttons ───────────────────────────────────────────────────
+        # ── buttons row ──────────────────────────────────────────────────────
         self._btn_row = ctk.CTkFrame(toolbar, fg_color="transparent")
-        self._btn_row.pack(side="top", fill="x", padx=0, pady=(6, 0))
+        self._btn_row.pack(side="top", fill="x", padx=0, pady=(9, 0))
 
         btn_opts = {
             "height": 34,
@@ -209,18 +210,22 @@ class VostokVaultApp:
         )
         # _update_btn is intentionally not packed here — shown only when an update is found
 
-        # ── row 1: status / notifications ────────────────────────────────────
-        status_row = ctk.CTkFrame(toolbar, fg_color="transparent")
-        status_row.pack(side="top", fill="x", padx=0, pady=(2, 0))
+        # ── status bar (row 2 of root grid) ─────────────────────────────────
+        status_bar = ctk.CTkFrame(
+            self.root, height=28, corner_radius=0, fg_color=("gray88", "gray17")
+        )
+        status_bar.grid(row=2, column=0, columnspan=2, sticky="ew", padx=0, pady=0)
+        status_bar.grid_propagate(False)
+        status_bar.pack_propagate(False)
 
         self._status = ctk.CTkLabel(
-            status_row,
+            status_bar,
             text=f"Ready  ·  v{self._version}",
-            font=ctk.CTkFont(family=font, size=13),
+            font=ctk.CTkFont(family=font, size=12),
             anchor="w",
-            text_color=("gray75", "gray75"),
+            text_color=("gray40", "gray65"),
         )
-        self._status.pack(side="left", padx=14, fill="x", expand=True)
+        self._status.pack(side="left", padx=12, fill="x", expand=True)
 
     def _schedule_update_check(self, check_for_updates: bool) -> None:
         if not check_for_updates:
