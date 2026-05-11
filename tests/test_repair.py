@@ -346,6 +346,9 @@ def test_create_repaired_backup_success(
     source_char = (source / "Character.tres").read_text(encoding="utf-8")
     assert "mod_ext" in source_char
 
+    repaired_char = (repaired / "Character.tres").read_text(encoding="utf-8")
+    assert "mod_ext" not in repaired_char
+
 
 def test_create_repaired_backup_source_unchanged(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch

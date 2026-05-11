@@ -116,6 +116,8 @@ def create_repaired_backup(
         log.error("create_repaired_backup: dest equals source, aborting")
         return (False, "write_error")
 
+    known_names = frozenset(item["id"].replace("_", " ") for item in items_db)
+
     try:
         dest.mkdir(parents=True, exist_ok=True)
         shutil.copytree(source_backup_path, dest, dirs_exist_ok=True)
@@ -132,7 +134,6 @@ def create_repaired_backup(
             # Build orphaned_ext_ids from ALL orphaned item ext_resources in the
             # file — not just those referenced by itemData. This catches nested
             # attachment/ammo references inside vanilla weapon sub_resources.
-            known_names = frozenset(item["id"].replace("_", " ") for item in items_db)
             full_ext_map = _parse_ext_resources([ln.rstrip("\n") for ln in lines])
             orphaned_ext_ids = {
                 ext_id

@@ -335,7 +335,7 @@ def load_trader_task_catalog() -> dict[str, dict]:
 
 def _filter_extresource_array_refs(value: str, orphaned_ext_ids: set[str]) -> str:
     """Remove orphaned ExtResource refs from Array[...]([ ... ]) values."""
-    m = re.search(r"(Array\[[^\]]+\]\(\[)(.*?)(\]\))", value, re.DOTALL)
+    m = re.search(r"(Array\[.*?\]\(\[)(.*?)(\]\))", value)
     if not m:
         return value
     inner = m.group(2)
@@ -356,7 +356,7 @@ def _rewrite_extresource_array_refs(line: str, orphaned_ext_ids: set[str]) -> st
 
 def _filter_subresource_refs(value: str, orphaned_sub_ids: set[str]) -> str:
     # Handle Array[...]([ inner ]) format
-    m = re.search(r"(Array\[[^\]]+\]\(\[)(.*?)(\]\))", value, re.DOTALL)
+    m = re.search(r"(Array\[.*?\]\(\[)(.*?)(\]\))", value)
     if m:
         inner = m.group(2)
         refs = re.findall(r'SubResource\("([^"]+)"\)', inner)
@@ -364,7 +364,7 @@ def _filter_subresource_refs(value: str, orphaned_sub_ids: set[str]) -> str:
         return value[: m.start(2)] + ", ".join(kept) + value[m.end(2) :]
 
     # Handle plain [ inner ] format
-    m = re.search(r"\[(.*?)\]", value, re.DOTALL)
+    m = re.search(r"\[(.*?)\]", value)
     if m:
         inner = m.group(1)
         refs = re.findall(r'SubResource\("([^"]+)"\)', inner)
