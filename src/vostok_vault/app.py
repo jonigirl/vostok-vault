@@ -117,9 +117,14 @@ class VostokVaultApp:
 
     def _build_toolbar(self) -> None:
         font = get_font()
-        toolbar = ctk.CTkFrame(self.root, height=52, corner_radius=0)
+        toolbar = ctk.CTkFrame(self.root, height=80, corner_radius=0)
         toolbar.grid(row=1, column=0, columnspan=2, sticky="ew", padx=0, pady=0)
         toolbar.grid_propagate(False)
+        toolbar.pack_propagate(False)
+
+        # ── row 0: buttons ───────────────────────────────────────────────────
+        self._btn_row = ctk.CTkFrame(toolbar, fg_color="transparent")
+        self._btn_row.pack(side="top", fill="x", padx=0, pady=(6, 0))
 
         btn_opts = {
             "height": 34,
@@ -128,64 +133,72 @@ class VostokVaultApp:
         }
 
         ctk.CTkButton(
-            toolbar, text="Restore", width=90, command=self._on_restore, **btn_opts
-        ).pack(side="left", padx=(10, 4), pady=9)
+            self._btn_row,
+            text="Restore",
+            width=90,
+            command=self._on_restore,
+            **btn_opts,
+        ).pack(side="left", padx=(10, 4))
         ctk.CTkButton(
-            toolbar, text="Rename Tag", width=100, command=self._on_rename, **btn_opts
-        ).pack(side="left", padx=4, pady=9)
+            self._btn_row,
+            text="Rename Tag",
+            width=100,
+            command=self._on_rename,
+            **btn_opts,
+        ).pack(side="left", padx=4)
         self._open_folder_btn = ctk.CTkButton(
-            toolbar,
+            self._btn_row,
             text="Open Backups Folder",
             width=140,
             command=self._on_open_folder,
             state="disabled",
             **btn_opts,
         )
-        self._open_folder_btn.pack(side="left", padx=4, pady=9)
+        self._open_folder_btn.pack(side="left", padx=4)
 
         self._repair_btn = ctk.CTkButton(
-            toolbar,
+            self._btn_row,
             text="Repair",
             width=80,
             command=self._on_repair,
             state="disabled",
             **btn_opts,
         )
-        self._repair_btn.pack(side="left", padx=4, pady=9)
+        self._repair_btn.pack(side="left", padx=4)
 
-        ctk.CTkFrame(toolbar, width=1, fg_color=("gray70", "gray40")).pack(
-            side="left", fill="y", padx=(8, 8), pady=10
+        ctk.CTkFrame(self._btn_row, width=1, fg_color=("gray70", "gray40")).pack(
+            side="left", fill="y", padx=(8, 8), pady=4
         )
 
         ctk.CTkButton(
-            toolbar,
+            self._btn_row,
             text="🗑  Delete",
             width=92,
             fg_color="#7A1C1C",
             hover_color="#5C1010",
             command=self._on_delete,
             **btn_opts,
-        ).pack(side="left", padx=(0, 4), pady=9)
+        ).pack(side="left", padx=(0, 4))
 
         self._watch_btn = ctk.CTkButton(
-            toolbar,
+            self._btn_row,
             text="Auto-Backup: Off",
             width=140,
             command=self._on_toggle_watch,
             **btn_opts,
         )
-        self._watch_btn.pack(side="left", padx=4, pady=9)
+        self._watch_btn.pack(side="left", padx=4)
 
         ctk.CTkButton(
-            toolbar,
+            self._btn_row,
             text="⚙ Settings",
             width=100,
             command=self._on_open_settings,
             **btn_opts,
-        ).pack(side="right", padx=(4, 10), pady=9)
+        ).pack(side="right", padx=(4, 10))
 
         self._update_btn = ctk.CTkButton(
-            toolbar,
+            self._btn_row,
             text="⬆ Update available",
             width=140,
             fg_color=("#1A5276", "#1A5276"),
@@ -196,14 +209,18 @@ class VostokVaultApp:
         )
         # _update_btn is intentionally not packed here — shown only when an update is found
 
+        # ── row 1: status / notifications ────────────────────────────────────
+        status_row = ctk.CTkFrame(toolbar, fg_color="transparent")
+        status_row.pack(side="top", fill="x", padx=0, pady=(2, 0))
+
         self._status = ctk.CTkLabel(
-            toolbar,
+            status_row,
             text=f"Ready  ·  v{self._version}",
             font=ctk.CTkFont(family=font, size=13),
             anchor="w",
-            text_color=("gray60", "gray60"),
+            text_color=("gray75", "gray75"),
         )
-        self._status.pack(side="left", padx=12, fill="x", expand=True)
+        self._status.pack(side="left", padx=14, fill="x", expand=True)
 
     def _schedule_update_check(self, check_for_updates: bool) -> None:
         if not check_for_updates:
@@ -218,7 +235,7 @@ class VostokVaultApp:
 
     def _on_update_available(self, info: dict) -> None:
         self._update_info = info
-        self._update_btn.pack(side="right", padx=(4, 4), pady=9)
+        self._update_btn.pack(side="right", padx=(4, 4))
 
     def _on_show_update(self) -> None:
         if self._update_info is not None:
