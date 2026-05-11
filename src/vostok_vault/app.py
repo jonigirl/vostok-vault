@@ -436,13 +436,20 @@ class VostokVaultApp:
         except Exception:
             items_db = []
 
+        if not items_db:
+            self._set_status("Repair failed — item database unavailable.")
+            self._repair_btn.configure(state="normal")
+            return
+
         source_path = Path(self._selected["_path"])
 
         def _detect() -> dict:
             return rp.detect_orphaned_items(source_path, items_db)
 
         def _on_done(detection: dict) -> None:
-            self.root.after(0, lambda: self._on_repair_detected(detection, items_db))
+            self.root.after(
+                0, lambda: self._on_repair_detected(detection, source_path, items_db)
+            )
 
         def _thread() -> None:
             detection = _detect()
@@ -450,7 +457,9 @@ class VostokVaultApp:
 
         threading.Thread(target=_thread, daemon=True).start()
 
-    def _on_repair_detected(self, detection: dict, items_db: list[dict]) -> None:
+    def _on_repair_detected(
+        self, detection: dict, source_path: Path, items_db: list[dict]
+    ) -> None:
         if not detection["affected_files"]:
             self._set_status("No orphaned items found.")
             self._repair_btn.configure(state="normal")
@@ -466,8 +475,6 @@ class VostokVaultApp:
 
         self._set_status("Repairing…")
         self._repair_btn.configure(state="disabled")
-
-        source_path = Path(self._selected["_path"])
 
         def _do_repair() -> tuple[bool, str]:
             return rp.create_repaired_backup(source_path, items_db)

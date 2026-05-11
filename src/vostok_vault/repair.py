@@ -112,7 +112,9 @@ def create_repaired_backup(
     folder_name = f"{original_id}_repaired_{sanitise_tag(original_tag)}"
     dest = BACKUP_DIR / folder_name
 
-    assert dest != source_backup_path, "dest must not equal source"
+    if dest == source_backup_path:
+        log.error("create_repaired_backup: dest equals source, aborting")
+        return (False, "write_error")
 
     try:
         dest.mkdir(parents=True, exist_ok=True)
