@@ -30,3 +30,6 @@ dev = [
     "pytest-cov>=7.1.0",
     "requests>=2.33.1",
 ]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

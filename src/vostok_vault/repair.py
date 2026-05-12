@@ -65,7 +65,7 @@ def detect_orphaned_items(backup_path: Path, items_db: list[dict]) -> dict:
 
     all_orphan_names: set[str] = set()
     total_slots = 0
-    for filename, slots in affected_files.items():
+    for _filename, slots in affected_files.items():
         total_slots += len(slots)
         for slot in slots:
             all_orphan_names.add(slot["stem_name"])
